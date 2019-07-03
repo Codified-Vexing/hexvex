@@ -1,0 +1,27 @@
+# hexvex assembly version 1
+
+# It will keep incrementing a 7-segment display with the Fibonacci sequence.
+
+|defaults.xasm
+
+_nmove 0 multp  # Make sure the accumulator is empty.
+_nmove 1 adder  # Starting Fibonacci number.
+_nmove 0 ca2  # a memento
+_nmove 0 ca1  # remember the memento
+[next]
+:ngoto trrp7
+_rmove ca2 ca1
+_rmove acc1 ca2
+_rmove ca1 adder  # Add the number to itself.
+_rmove acc1 io_a
+_ngoto next
+
+[trrp0]
+[trrp1]
+[trrp2]
+[trrp3]
+[trrp4]
+[trrp5]
+[trrp6]
+[trrp7]
+_nhalt

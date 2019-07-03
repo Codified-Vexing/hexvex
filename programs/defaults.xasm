@@ -1,0 +1,24 @@
+*ca1 = 0xc1  # Least Significant half of the Cache Register
+*ca2 = 0xc2  # Most Significant half of the Cache Register
+*acc1 = 0xda  # Read ALU Accumulator, Least Significant Bits
+*acc2 = 0xdb  # Read ALU Accumulator, Most Significant Bits
+*ut_hex = 0xd1  # Read the whole User Timer Register
+*ut_byt = 0xd2  # Read the Least Significant half of the User Timer Register.
+*nega = 0xf4  # Negate the bits of the Store, Aux Bus is becomes the Least significant part of the result.
+*adder = 0xf1  # Addition ALU module
+*multp = 0xf2  # Multiplication ALU module
+*tequal = 0xf3  # Magnitude comparison test for the ALU
+*io_a = 0xaa  # General Purpose Register A (with display)
+*io_b = 0xbb  # General Purpose Register B (with display)
+
+_nmove 0 multp  # Make sure the accumulator is empty.
+
+[trrp0]
+[trrp1]
+[trrp2]
+[trrp3]
+[trrp4]
+[trrp5]
+[trrp6]
+[trrp7]
+_nhalt

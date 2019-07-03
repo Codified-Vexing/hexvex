@@ -1,0 +1,22 @@
+# hexvex assembly version 1
+
+|defaults.xasm
+
+*n = 3
+
+[start]
+_nmove n adder
+:accfet 
+:rmove ca1 io_a
+:rmove ca2 io_b
+_ngoto start
+
+[trrp0]
+[trrp1]
+[trrp2]
+[trrp3]
+[trrp4]
+[trrp5]
+[trrp6]
+[trrp7]
+

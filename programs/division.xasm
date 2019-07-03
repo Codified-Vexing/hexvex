@@ -1,0 +1,34 @@
+# hexvex assembly version 1
+
+# Making division the slow way. And not even an exact number!
+# io_a will display the integer result and io_b will display the remainder.
+# The remainder isn't working yet because subtraction in hardware sucks.
+
+|defaults.xasm
+
+*dividend = 49
+*divisor = 4
+
+# Calculate quotient
+[start]
+_nmove divisor adder
+_nmove dividend tequal
+>rmove acc1 ca2
+>xfeed ca1
+>nmove 1 adder
+>xfeed ca1
+>ngoto start
+
+# The quotient has been found, thus we output it to a display.
+_rmove ca1 io_a
+
+# Clean up
+_nmove 0 multp
+_xfeed ca2
+
+# Calculate modulus and output
+_nmove 0 nega
+_nmove dividend adder
+_rmove acc1 io_b
+
+_nhalt
