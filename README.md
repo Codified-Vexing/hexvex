@@ -9,7 +9,8 @@ The «HexVex.png» file is the full diagram of the HexVex hardware in logic bloc
 Inside «Low_Level_Scripts» there's the following:
 - «hxv_assm_t1.py» is the assembler. It takes programs in human-readable assembly format (I call ".xasm") and output binaries to be loaded into HexVex's program memory. It can also output in other formats, for debugging and for kicks.
 - «hxv_microcode_builder.py» generates binaries to be stored in a HexVex decoder ROMs
-These are boound to become obsolete after the Trainer works, as it will have its own version of assembly code parser.
+
+These are bound to become obsolete after the Trainer works, as it will have its own version of assembly code parser.
 
 The «programs» folder has example assembly code scripts to aid someone learning the language.
 
