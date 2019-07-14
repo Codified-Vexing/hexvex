@@ -1,5 +1,5 @@
 # Version 0.86 - 14/2/2019
-# License: Copyleft
+# License: GNU GPL-3.0
 # NOTICE: This assembler reads from type 1 assembly programs.
 # This is the most basic assembler. No clever tricks and very straightforward mnemonic-to-hex conversion.º
 # This version is altered to be used in the HexVex emulator.
