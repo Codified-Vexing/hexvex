@@ -19,8 +19,6 @@ from os.path import dirname
 prog_dir = "progs/"
 ## :CONFIGURATION
 
-PNTR = 0  # Program pointer or Memory address
-
 condition = {
 			"_":(0x0, "not WAIT.get()"),
 			":":(0x1, "CRRY.get()"),
@@ -64,21 +62,24 @@ oper = {
 def wrap(inp, limit):
 	return inp % limit
 
-def split_hex(inp=0):	
-	out = bin(inp)[2:18].zfill(16)
-	out1 = out[0:8]
-	out2 = out[8:16]
-	out1 = int(out1, 2)
-	out2 = int(out2, 2)
-	return (out1, out2)
+def split_hex(inp=0):
+	out = bin(abs(inp))[2:18].zfill(16)
+	msb = out[0:8]
+	lsb = out[8:16]
+	lsb = int(lsb, 2)
+	msb = int(msb, 2)
+	return (msb, lsb)
 
-def join_byte(inp1=0, inp2=0):
-	out1 = bin(wrap(inp1,0x100))[2:10].zfill(8)
-	out2 = bin(wrap(inp2,0x100))[2:10].zfill(8)
-	out = out1+out2
+def join_byte(msb=0, lsb=0):
+	msb = bin(wrap(msb,0x100))[2:10].zfill(8)
+	lsb = bin(wrap(lsb,0x100))[2:10].zfill(8)
+	out = msb+lsb
 	out = int(out, 2)
 	return out
 
+def instr(inp):
+	# Given a memory pointer, figure out the instruction number.
+	return int(inp/8)
 
 ## PERIPHERAL DEVICES:
 
@@ -208,13 +209,15 @@ class GPIO(Register):
 class ALU:
 	def __init__(self):
 		self.name = "Bogus ALU module"
-		self.rule = "TO_ACCUM({})"  # Python code with the operation being performed.
+		self.rule = "TO_ACCUM({0})"  # Python code with the operation being performed.
 
-	def set(self, inp=None):
-		if inp is None:
-			inp = M_BUS.get()
-		result = self.rule.format(inp)
-		I_BUS = eval(result)
+	def set(self, M=None, A=None):
+		if M is None:
+			M = M_BUS.get()
+		if A is None:
+			A = A_BUS.get()
+		result = self.rule.format(M, A)  # M = lsb = {0}; A = msb = {1}
+		exec(result)
 		I_FLAG.set()
 	def get(self):
 		# ALU modules rarely have a read-the-module address.
@@ -223,7 +226,23 @@ class ALU:
 ## :PERIPHERAL DEVICES
 ## SPECIAL DEVICES:
 
-BLINK = Flip_Flop()  # Shows the system clock state
+
+pntr_lsb = Register()  # Program pointer or Memory address
+pntr_msb = Register()  # Program pointer or Memory address
+def PNTR_add(inp):
+	n = join_byte(pntr_msb.get(), pntr_lsb.get())
+	n += inp
+	msb, lsb = split_hex(n)
+	pntr_lsb.set(lsb)
+	pntr_msb.set(msb)
+def PNTR_set(inp):
+	msb, lsb = split_hex(inp)
+	pntr_lsb.set(lsb)
+	pntr_msb.set(msb)
+def PNTR():
+	return join_byte(pntr_msb.get(), pntr_lsb.get())
+
+BLINKER = Flip_Flop()  # Shows the system clock state
 
 M_BUS = Register()  # Main Bus
 A_BUS = Register()  # Auxiliary Bus
@@ -241,40 +260,72 @@ CRRY = Flip_Flop()
 #---
 PWM = Flip_Flop()
 UTR = Flip_Flop()
+# weird ones
+JMP = Flip_Flop()
+#---
+
+cach_lsb = Register()
+cach_msb = Register()
 
 acc_lsb = Register()
 acc_msb = Register()
-def TO_ACCUM(inp):
-	lsb, msb = split_hex(inp)
-	acc_lsb.set(lsb)
-	acc_msb.set(msb)
 stmr_lsb = Register()
 stmr_msb = Register()
-def TO_STMR(inp):
-	lsb, msb = split_hex(inp)
+utmr_lsb = Register()
+utmr_msb = Register()
+def ACC_set(inp):
+	msb, lsb = split_hex(inp)
+	acc_lsb.set(lsb)
+	acc_msb.set(msb)
+def STMR_set(inp):
+	msb, lsb = split_hex(inp)
 	stmr_lsb.set(lsb)
 	stmr_msb.set(msb)
+def TO_UTMR(inp):
+	msb, lsb = split_hex(inp)
+	utmr_lsb.set(lsb)
+	utmr_msb.set(msb)
 def STEP_STMR():
-	n = join_byte(stmr_lsb.get(), stmr_msb.get())
+	n = join_byte(stmr_msb.get(), stmr_lsb.get())
 	if n == 0:
 		pass
 	elif n == 1:
 		WAIT.reset()
 	else:
 		n -= 1
-	lsb, msb = split_hex(n)
+	msb, lsb = split_hex(n)
 	stmr_lsb.set(lsb)
 	stmr_msb.set(msb)
-	
+def STEP_UTMR():
+	n = join_byte(utmr_msb.get(), utmr_lsb.get())
+	n += 1
+	msb, lsb = split_hex(n)
+	utmr_lsb.set(lsb)
+	utmr_msb.set(msb)
+		
 ## :SPECIAL DEVICES
+
+## ALU minilanguage keywords:
+
+def TO_ACCUM(inp):
+	I_BUS.set(inp)
+
+def TO_FLAGS(pattern, mode):
+	pick = ("set", "toggle")
+	flag = [BOOL, EQAL, GRTR, CRRY]
+	for which, state in enumerate(pattern):
+		if state != "x":
+			getattr(flag[which], pick[mode])(bool(state))
+
+## :ALU minilanguage keywords
+
 
 class Core:
 	def __init__(self, **devices):
 		self.__call__("_nhalt")  # Start with a default program.
-		self.instr = 0  # Remember to check the proper instruction when jumping because pointers don't match program lines.
 		self.g_point = 0  # pointer for «gobak» opcode
 		self.c_point = 0  # pointer for «cont» opcode
-		self.decoder = [Decoder1(self), Decoder2(self)]
+		self.decoder = [Stage1(self), Stage2(self)]
 		# "Read" and "Write" terms are relative to the Bus. The Bus reads the device, and writes to the device.
 		# The structure of these is: {addr = [Peripheral1, Peripheral2], }
 		self.read = dict()
@@ -290,61 +341,87 @@ class Core:
 		
 	def __next__(self):
 		# Compute an instruction
-		global PNTR
-			
 		if WAIT.get():
 			print("HexVex is halted...")
 			STEP_STMR()
-		elif self.instr >= len(self.PROG):
+		elif instr(PNTR()) >= len(self.PROG):
 			# the program is empty.
 			print("The program is empty!")
 			self.decoder[0].nhalt(0)
 		else:
-			permit = eval(self.PROG[self.instr]["cond"])
+			line = self.PROG[instr(PNTR())]
+			permit = eval(line["cond"])
 			if permit:
-				if PNTR % 7 == 0:
-					getattr(self.decoder[0], self.PROG[self.instr]["opcode"])(self.PROG[self.instr]["arg"])
-				elif PNTR % 7 == 2:
-					getattr(self.decoder[1], self.PROG[self.instr]["opcode"])(self.PROG[self.instr]["arg"])
-				elif PNTR % 7 == 4:
-					pass
-			if PNTR % 7 == 6:
+				if PNTR() % 8 == 0:
+					# Cleaning up...
+					if I_FLAG.get():
+						ACC_set(I_BUS.get())
+						I_FLAG.reset()
 					M_BUS.set(0)
 					A_BUS.set(0)
-					self.instr += 1					
-			if I_FLAG.get():
-				TO_ACCUM(I_BUS)
-				I_FLAG.reset()
-		
-		PNTR += 1
-		BLINK.toggle()
+					JMP.reset()
+				elif PNTR() % 8 == 2:
+					getattr(self.decoder[0], line["opcode"])(line["arg"])
+				elif PNTR() % 8 == 4:
+					getattr(self.decoder[1], line["opcode"])(line["arg"])
+				elif PNTR() % 8 == 6:
+					pass	
+
+		if not JMP.get():
+			PNTR_add(1)
+		BLINKER.toggle()
 			
-	def __call__(self, prog, line_num=0):
-		# Parse a program
-		global PNTR
-		if line_num == 0:
-			# Means it's a new program so we have to clear the old one.
-			self.stt_reset()
-			
-		uvars = dict()
-		subrs = dict()
-		
-		def arguing(inp1="0", inp2="0"):
+	def __call__(self, prog):
+		self.stt_reset()
+		uvars, subrs, all_instrs, line_num = self.raw_parse(prog)
+	
+		def arguing(arg=["0",]):
 			# This sorts out the instruction arguments during program parsing in a 
 			# polymorphic way.
-			inp1 = uvars.get(inp1, subrs.get(inp1, eval(inp1)))
-			inp2 = uvars.get(inp2, subrs.get(inp2, eval(inp2)))
-
-			return join_byte(inp1, inp2)
+			combo = {**subrs, **uvars}
+			msb, lsb = [0, 0]  # works as fall if anything fails
 			
-				
-		# Get each instruction from each line
+			if len(arg) == 1:
+				n = combo.get(arg[0], None)
+				if n is None:
+					n = int(arg[0],0)
+				msb, lsb = split_hex(n)
+			elif len(arg) == 2:			
+				msb = combo.get(arg[0], None)
+				if msb is None:
+				 	msb = int(arg[0],0)
+				lsb = combo.get(arg[1], None)
+				if lsb is None:
+				 	lsb = int(arg[1],0)
+
+			return join_byte(msb, lsb)
+		
+		for pointer, instr in all_instrs.items():
+			cond = instr[0]
+			instr = instr[1:].split()
+			code = instr[0]
+			arg = instr[1:]
+			arg = arguing(arg)
+			human_factor = [instr[1:], split_hex(arg)]
+			hx = int(bin(condition[cond][0])[2:].zfill(3) + bin(oper[code][0])[2:].zfill(5) + bin(arg)[2:].zfill(16), 2)
+			self.PROG.append({"cond":condition[cond][1], "opcode":oper[code][1], "hex":hx, "mem_addr": pointer, "arg":arg, "arg_human":human_factor})
+			print(str(pointer)+":", cond+" "+code, *human_factor[0], "=>", human_factor[1], sep="\t")
+		
+	def raw_parse(self, prog, line_num=0, uvars=None, subrs=None, other=None):
+		
+		if uvars is None:
+			uvars = dict()
+		if subrs is None:
+			subrs = dict()
+		if other is None:
+			other = dict()
+		
+		# Segregate each line
 		prog = prog.split("\n")
 		# Sanitize each line
 		prog = list(map(lambda x: x.strip(), prog))
 		
 		for instr in prog:
-			line_num += 1
 			found = instr.find("#")
 			if found >= 0:
 				instr = instr[:found]  # Filter out comments
@@ -352,11 +429,12 @@ class Core:
 			if len(instr) >= 1: # Ignore empty lines
 				cond = instr[0]
 				if cond == "|":  # It's an import
-					with open(dirname(prog_dir)+"/"+cond[1:]) as fl:
+					with open(dirname(prog_dir)+"/"+instr[1:]) as fl:
 						ext_prog = fl.read()
-					added_uvars, added_subrs, line_num = self.parse(ext_prog, line_num-1)
+					added_uvars, added_subrs, added_other, line_num = self.raw_parse(ext_prog, line_num, uvars, subrs, other)
 					uvars = {**uvars, **added_uvars}
 					subrs = {**subrs, **added_subrs}
+					other = {**other, **added_other}
 				elif cond == "*":  # It's a variable
 					part = instr.split("=")
 					# Make sure it's legal var value
@@ -368,19 +446,17 @@ class Core:
 					else:
 						print("INVALID VARIABLE DEFINITION!")
 						break
-				elif cond =="[" and cond[-1] == "]":  # It's a goto label
-						subrs[cond[1:-1]] = line_num
+				elif cond =="[" and instr[-1] == "]":  # It's a goto label
+						subrs[instr[1:-1]] = line_num
 				else:
-					instr = instr[1:].split()
-					code = instr[0]
-					arg = arguing(*instr[1:])
-					hx = int(bin(condition[cond][0])[2:].zfill(3) + bin(oper[code][0])[2:].zfill(5) + bin(arg)[2:].zfill(16), 2)
-					self.PROG.append({"cond":condition[cond][1], "opcode":oper[code][1], "arg":arg, "hex":hx})
+					other[line_num] = instr
+					line_num += 8
 
 		# Return for when it is on recursion, the higher layers have continuity with lower layers.
-		return (uvars, subrs, line_num)
+		return (uvars, subrs, other, line_num)
 		
 	def add(self, device, read_addr=None, write_addr=None, both_addr=None):
+		# The Bus reads from the device, and writes to the device.
 		# Connects a new device to this machine.
 		if both_addr:
 			read = both_addr
@@ -404,10 +480,13 @@ class Core:
 		pass
 		
 	def stt_reset(self):
-		global PNTR
 		self.PROG = list()
-		PNTR = 0
-		self.instr = 0
+		PNTR_set(0)
+		M_BUS.set(0)
+		A_BUS.set(0)
+		ACC_set(0)
+		STMR_set(0)
+		TO_UTMR(0)
 		# State Registers
 		RAVN.reset()
 		WAIT.reset()
@@ -417,21 +496,24 @@ class Core:
 		CRRY.reset()
 		PWM.reset()
 		UTR.reset()
+		JMP.reset()
 		print("System has been reset!")
 
 
 ## INSTRUCTION DECODERS:
 # Make each opcode return the machine pattern hexes.
 
-class Decoder1:
+class Decoder:
 	def __init__(self, core):
 		self.core = core
-	def __getattr__(self, val):
+	def __getattr__(self, attr):
 		print("OPCODE ILLEGAL")
+
+class Stage1(Decoder):
 	##The operations:
 	#SYS
 	def nhalt(self, inp):
-		TO_STMR(inp)
+		STMR_set(inp)
 		WAIT.set()
 	def rhalt(self, inp):
 		pass
@@ -444,9 +526,12 @@ class Decoder1:
 		A_BUS.set(num)
 	#GOTO	
 	def ngoto(self, inp):
-		pass
+		msb, lsb = split_hex(inp)
+		M_BUS.set(lsb)
+		A_BUS.set(msb)
 	def rgoto(self, inp):
-		pass
+		M_BUS.set()
+		A_BUS.set(acc_lsb.get())
 	def cgoto(self, inp):
 		pass
 	def cont(self, inp):
@@ -497,11 +582,7 @@ class Decoder1:
 		pass
 
 
-class Decoder2:
-	def __init__(self, core):
-		self.core = core
-	def __getattr__(self, val):
-		pass
+class Stage2(Decoder):
 	##The operations:
 	#SYS
 	def poke(self, addr):
@@ -514,7 +595,11 @@ class Decoder2:
 	def tell(self, inp):
 		addr, num = split_hex(inp)
 		self.poke(addr)
-	#GOTO	
+	#GOTO
+	def ngoto(self, inp):
+		n = join_byte(A_BUS.get(), M_BUS.get())
+		JMP.set()
+		PNTR_set(n)
 	#MOVE
 	def nmove(self, inp):
 		n, addr = split_hex(inp)
