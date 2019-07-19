@@ -1,0 +1,36 @@
+
+#https://www.youtube.com/watch?v=Nj80Kwenh6I
+# Knight Rider effect
+
+|defaults.xasm
+*bar = 0x0c
+[here]
+_nmove 0b00000000 bar
+_nmove 0b00000001 bar
+_nmove 0b00000011 bar
+_nmove 0b00000111 bar
+_nmove 0b00001111 bar
+_nmove 0b00011111 bar
+_nmove 0b00111111 bar
+_nmove 0b01111110 bar
+_nmove 0b11111100 bar
+_nmove 0b11110000 bar
+_nmove 0b11100000 bar
+_nmove 0b11000000 bar
+_nmove 0b10000000 bar
+_nmove 0b00000000 bar
+_nmove 0b10000000 bar
+_nmove 0b11000000 bar
+_nmove 0b11100000 bar
+_nmove 0b11110000 bar
+_nmove 0b11111000 bar
+_nmove 0b11111100 bar
+_nmove 0b01111110 bar
+_nmove 0b00111111 bar
+_nmove 0b00011111 bar
+_nmove 0b00001111 bar
+_nmove 0b00000111 bar
+_nmove 0b00000011 bar
+_nmove 0b00000001 bar
+
+_ngoto here

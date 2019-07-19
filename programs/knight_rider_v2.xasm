@@ -1,0 +1,43 @@
+
+#https://www.youtube.com/watch?v=Nj80Kwenh6I
+# Knight Rider effect
+
+|defaults.xasm
+*bar = 0x0c
+_nmove 0 bar
+
+[fill_r]
+_tell >> 0b01
+[f_right]
+_nmove 1 >>
+_rmove acc1 bar
+_nmove 0b11111110 teql
+=ngoto empty_r
+!ngoto f_right
+
+[empty_r]
+_tell >> 0b00
+[e_right]
+_nmove 1 >>
+_rmove acc1 bar
+_nmove 0b0 teql
+=ngoto fill_l
+!ngoto e_right
+
+[fill_l]
+_tell << 0b01
+[f_left]
+_nmove 1 <<
+_rmove acc1 bar
+_nmove 0b01111111 teql
+=ngoto empty_l
+!ngoto f_left
+
+[empty_l]
+_tell << 0b00
+[e_left]
+_nmove 1 <<
+_rmove acc1 bar
+_nmove 0b0 teql
+=ngoto fill_r
+!ngoto e_left
