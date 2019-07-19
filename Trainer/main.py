@@ -10,7 +10,7 @@ __license__ = "GNU GPL-3.0"
 # TODO:
 # Make more files imported into here so stuff is better organized. Eg. configs
 
-import assembler as ass
+import configuration as sett
 from environment import Environ
 
 import gi
@@ -23,7 +23,7 @@ class WindowMain (Environ):
 	def __init__(self):
 		# Get GUI from Glade file
 		self.builder = g.Builder()
-		self.builder.add_from_file("hxv_testbed.glade")  # UI file specified here
+		self.builder.add_from_file("hxv_trainer.glade")  # UI file specified here
 		
 		# Display main window
 		self.mainwin = self.builder.get_object("mainwin")  # The top-level window's ID could be "mainwin"
@@ -31,10 +31,6 @@ class WindowMain (Environ):
 		self.mainwin.show()
 
 		Environ.__init__(self)
-		
-		## CONFIGURATION:
-		self.CLK = 2  # in Hertz
-		## :CONFIGURATION
 		
 		# A timed event. Can be used to make a looping function.
 		# self.timer = GObject.timeout_add(self.milliseconds, self.method)
@@ -75,17 +71,23 @@ class WindowMain (Environ):
 	def set_clkspeed(self, widget=None):
 		if not widget is None:
 			if type(widget) in (int, float):
-				self.CLK = widget
+				val = widget
 			else:
-				self.CLK = widget.get_value()		
-		
+				val = widget.get_value()
+			#https://sciencing.com/exponential-equation-two-points-8117999.html
+			val = sett.max_hz*val**(4)
+			
+			val = round(val, 3)
+			sett.CLK = val
+			
+		self.freq_meter.set_text(str(sett.CLK))	
 		if self.clkStepTime:
 			gob.source_remove(self.clkStepTime)
 	
 		# The division by two is because the program pointers actually step
 		# from 2 to 2 ticks so that the blinking LED has a moment off in between
 		# steps, triggered by each real tick.
-		self.clkStepTime = gob.timeout_add(int((1/self.CLK*1000)/2), self.metronome)
+		self.clkStepTime = gob.timeout_add(int((1/sett.CLK*1000)/2), self.metronome)
 		
 	
 	

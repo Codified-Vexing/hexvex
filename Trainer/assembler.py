@@ -13,11 +13,11 @@ __license__ = "GNU GPL-3.0"
 # to be dealt with somehow.
 # -Make the global stuff into an encapsulated class, maybe?
 
-from os.path import dirname
+import configuration as sett
+from hxv_wiring import *
+from devices import *
 
-## CONFIGURATION:
-prog_dir = "progs/"
-## :CONFIGURATION
+from os.path import dirname
 
 condition = {
 			"_":(0x0, "not WAIT.get()"),
@@ -58,177 +58,11 @@ oper = {
 		"t+c":(0x2a, "cset"),
 		"pwm":(0x2b, "pwm"),
 		}
-		
-def wrap(inp, limit):
-	return inp % limit
 
-def split_hex(inp=0):
-	out = bin(abs(inp))[2:18].zfill(16)
-	msb = out[0:8]
-	lsb = out[8:16]
-	lsb = int(lsb, 2)
-	msb = int(msb, 2)
-	return (msb, lsb)
+## Signalling functions to internal registers:
+# They are here rather than hxv wiring because quirks in Python would let them 
+# be aware if the Register objects changed to other kind of register.
 
-def join_byte(msb=0, lsb=0):
-	msb = bin(wrap(msb,0x100))[2:10].zfill(8)
-	lsb = bin(wrap(lsb,0x100))[2:10].zfill(8)
-	out = msb+lsb
-	out = int(out, 2)
-	return out
-
-def instr(inp):
-	# Given a memory pointer, figure out the instruction number.
-	return int(inp/8)
-
-## PERIPHERAL DEVICES:
-
-class Flip_Flop:
-	def __init__(self):
-		self.value = False
-	
-	def get(self):
-		return self.value
-	
-	def set(self, val=True):
-		if type(val) is int:
-			val = bool(int(bin(val)[-1]))
-		self.value = val
-	
-	def reset(self):
-		self.set(False)
-
-	def toggle(self):
-		self.set(not self.get())
-	
-	def setup(self):
-		pass
-		
-	
-class Register:
-	def __init__(self):
-		self.value = 0
-	
-	def get(self):
-		return self.value
-		
-	def set(self, inp=None):
-		global M_BUS
-		if inp is None:
-			inp = M_BUS.get()
-		self.value = wrap(inp, 0x100)
-		
-	def setup(self):
-		pass
-
-
-class LED(Flip_Flop):
-	def __init__(self, ui_obj):
-		Flip_Flop.__init__(self)
-		self.pick = ("gtk-media-stop", "gtk-media-record")
-		self.do = ui_obj
-
-	def set(self, val=True):
-		Flip_Flop.set(self, val)
-		self.update()
-	
-	def update(self):
-		self.do.set_from_stock(self.pick[int(self.value)], 4)
-
-class Num_Disp(Register):
-	def __init__(self, label_obj):
-		Register.__init__(self)
-		self.note = ""
-		self.disp = label_obj
-	
-	def set(self, inp=None):
-		Register.set(self,inp)
-		self.update()
-			
-	def update(self):
-		self.disp.set_text(str(self.value))		
-
-
-class Bargraph(Register):
-	def __init__(self, label_objs):
-		Register.__init__(self)
-		self.pick = ("gtk-media-stop", "gtk-media-record")
-		self.disp = label_objs
-	
-	def set(self, inp=None):
-		Register.set(self,inp)
-		self.update()
-		
-	def update(self):
-		b = bin(self.value)[2:].zfill(8)
-		for digit, led in enumerate(self.disp):
-			led.set_from_stock(self.pick[int(b[digit])], 4)
-
-
-class DipSwitch(Register):
-	def __init__(self, entry_obj):
-		Register.__init__(self)
-		self.note = ""
-		self.entry = entry_obj
-	
-	def set(self, inp=None):
-		Register.set(self,inp)
-		self.update()
-
-	def update(self):
-		self.entry.set_text(str(self.value))
-	
-	def intake(self, widget):
-		inp = int(widget.get_text())
-		self.set(inp)
-		
-	
-class GPIO(Register):
-	def __init__(self, label_obj, mode_indicator):
-		Register.__init__(self)
-		self.pick = ("gtk-fullscreen", "gtk-leave-fullscreen")
-		self.note = ""
-		self.mode = False  # False = Readable device; True = Written-to device
-		self.disp = label_obj
-		self.LED = mode_indicator
-	
-	def set(self, inp=None):
-		Register.set(self,inp)
-		self.update()
-	
-	def setup(self):
-		pattern = bin(A_BUS)[-2:]
-		pick = {"00":self.mode, "01":not self.mode, "10":False, "11": True}
-		self.mode = pick[pattern]
-	
-	def update(self):
-		self.disp.set_text(str(self.value))
-		self.LED.set_from_stock(self.pick[int(self.value)], 4)
-
-
-class ALU:
-	def __init__(self):
-		self.name = "Bogus ALU module"
-		self.rule = "TO_ACCUM({0})"  # Python code with the operation being performed.
-
-	def set(self, M=None, A=None):
-		if M is None:
-			M = M_BUS.get()
-		if A is None:
-			A = A_BUS.get()
-		result = self.rule.format(M, A)  # M = lsb = {0}; A = msb = {1}
-		exec(result)
-		I_FLAG.set()
-	def get(self):
-		# ALU modules rarely have a read-the-module address.
-		pass
-
-## :PERIPHERAL DEVICES
-## SPECIAL DEVICES:
-
-
-pntr_lsb = Register()  # Program pointer or Memory address
-pntr_msb = Register()  # Program pointer or Memory address
 def PNTR_add(inp):
 	n = join_byte(pntr_msb.get(), pntr_lsb.get())
 	n += inp
@@ -241,38 +75,19 @@ def PNTR_set(inp):
 	pntr_msb.set(msb)
 def PNTR():
 	return join_byte(pntr_msb.get(), pntr_lsb.get())
+def GOBAK_set(inp):
+	msb, lsb = split_hex(inp)
+	gobak_lsb.set(lsb)
+	gobak_msb.set(msb)
+def GOBAK():
+	return join_byte(gobak_msb.get(), gobak_lsb.get())
+def CONT_set(inp):
+	msb, lsb = split_hex(inp)
+	cont_lsb.set(lsb)
+	cont_msb.set(msb)
+def CONT():
+	return join_byte(cont_msb.get(), cont_lsb.get())
 
-BLINKER = Flip_Flop()  # Shows the system clock state
-
-M_BUS = Register()  # Main Bus
-A_BUS = Register()  # Auxiliary Bus
-I_BUS = Register()  # ALU BUS ("I" for "Integration")
-I_FLAG = Flip_Flop()  # Accumulator trigger flag
-
-# State Registers
-RAVN = Flip_Flop()
-WAIT = Flip_Flop()
-#---Checked against instruction conditionals
-BOOL = Flip_Flop()
-EQAL = Flip_Flop()
-GRTR = Flip_Flop()
-CRRY = Flip_Flop()
-#---
-PWM = Flip_Flop()
-UTR = Flip_Flop()
-# weird ones
-JMP = Flip_Flop()
-#---
-
-cach_lsb = Register()
-cach_msb = Register()
-
-acc_lsb = Register()
-acc_msb = Register()
-stmr_lsb = Register()
-stmr_msb = Register()
-utmr_lsb = Register()
-utmr_msb = Register()
 def ACC_set(inp):
 	msb, lsb = split_hex(inp)
 	acc_lsb.set(lsb)
@@ -302,26 +117,16 @@ def STEP_UTMR():
 	msb, lsb = split_hex(n)
 	utmr_lsb.set(lsb)
 	utmr_msb.set(msb)
-		
-## :SPECIAL DEVICES
 
-## ALU minilanguage keywords:
+## :Signalling functions to internal registers
 
-def TO_ACCUM(inp):
-	I_BUS.set(inp)
-
-def TO_FLAGS(pattern, mode):
-	pick = ("set", "toggle")
-	flag = [BOOL, EQAL, GRTR, CRRY]
-	for which, state in enumerate(pattern):
-		if state != "x":
-			getattr(flag[which], pick[mode])(bool(state))
-
-## :ALU minilanguage keywords
+def instr(inp):
+	# Given a memory pointer, figure out the instruction number.
+	return int(inp/8)
 
 
 class Core:
-	def __init__(self, **devices):
+	def __init__(self, *mirrors, **devices):
 		self.__call__("_nhalt")  # Start with a default program.
 		self.g_point = 0  # pointer for «gobak» opcode
 		self.c_point = 0  # pointer for «cont» opcode
@@ -332,8 +137,19 @@ class Core:
 		self.write = dict()
 		
 		# Internal Devices:
+		# Updating the status of the device.
 		for each, device in devices.items():
 			globals()[each] = device
+		# Mirror widgets copy the value of existing devices, so you can
+		# display the same state on different widgets.
+		for each in mirrors:			
+			m, l, widget = each
+			m = globals()[m]
+			l = globals()[l]
+			tacked = TackOn16(m, l, widget)
+			m.mirrors.append(tacked)
+			l.mirrors.append(tacked)
+		
 		# To call these by name, use the global variables mentioned.
 		# Here we connect the internal devices that can access the Store.
 		self.add(acc_lsb, read_addr=0xda)
@@ -342,7 +158,7 @@ class Core:
 	def __next__(self):
 		# Compute an instruction
 		if WAIT.get():
-			print("HexVex is halted...")
+			#print("HexVex is halted...")
 			STEP_STMR()
 		elif instr(PNTR()) >= len(self.PROG):
 			# the program is empty.
@@ -393,7 +209,7 @@ class Core:
 				lsb = combo.get(arg[1], None)
 				if lsb is None:
 				 	lsb = int(arg[1],0)
-
+				 	
 			return join_byte(msb, lsb)
 		
 		for pointer, instr in all_instrs.items():
@@ -429,7 +245,7 @@ class Core:
 			if len(instr) >= 1: # Ignore empty lines
 				cond = instr[0]
 				if cond == "|":  # It's an import
-					with open(dirname(prog_dir)+"/"+instr[1:]) as fl:
+					with open(dirname(sett.prog_dir)+"/"+instr[1:]) as fl:
 						ext_prog = fl.read()
 					added_uvars, added_subrs, added_other, line_num = self.raw_parse(ext_prog, line_num, uvars, subrs, other)
 					uvars = {**uvars, **added_uvars}
@@ -482,6 +298,8 @@ class Core:
 	def stt_reset(self):
 		self.PROG = list()
 		PNTR_set(0)
+		GOBAK_set(0)
+		CONT_set(0)
 		M_BUS.set(0)
 		A_BUS.set(0)
 		ACC_set(0)
@@ -513,6 +331,7 @@ class Stage1(Decoder):
 	##The operations:
 	#SYS
 	def nhalt(self, inp):
+		print("--HEXVEX IS HALTED--")
 		STMR_set(inp)
 		WAIT.set()
 	def rhalt(self, inp):
@@ -529,17 +348,20 @@ class Stage1(Decoder):
 		msb, lsb = split_hex(inp)
 		M_BUS.set(lsb)
 		A_BUS.set(msb)
+		GOBAK_set(PNTR()-1)
 	def rgoto(self, inp):
 		M_BUS.set()
 		A_BUS.set(acc_lsb.get())
+		GOBAK_set(PNTR()-1)
 	def cgoto(self, inp):
-		pass
+		GOBAK_set(PNTR()-1)
 	def cont(self, inp):
-		pass
+		GOBAK_set(PNTR()-1)
 	def gobak(self, inp):
+		# Gobak doesn't set itself to go to itself.
 		pass
 	def rept(self, inp):
-		pass
+		GOBAK_set(PNTR()-1)
 	#MOVE
 	def nmove(self, inp):
 		n, device = split_hex(inp)
@@ -600,6 +422,10 @@ class Stage2(Decoder):
 		n = join_byte(A_BUS.get(), M_BUS.get())
 		JMP.set()
 		PNTR_set(n)
+	def gobak(self, inp):
+		where = GOBAK + inp
+		JMP.set()
+		PNTR_set(where)
 	#MOVE
 	def nmove(self, inp):
 		n, addr = split_hex(inp)
