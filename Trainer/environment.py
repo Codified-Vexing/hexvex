@@ -5,8 +5,9 @@ __version__ = "0.1.0"
 __license__ = "GNU GPL-3.0"
 
 import time
+import configuration as sett
 import assembler as ass
-from devices import *
+import hxv_wiring as H
 
 
 class Environ:
@@ -25,22 +26,46 @@ class Environ:
 
 		# Get widget references
 		#self.id = self.builder.get_object("id")
+		self.fileLt = self.builder.get_object("file_list")
 		self.mem = self.builder.get_object("assm_area")
+		self.clkstp = self.builder.get_object("freeze_butt")
 		self.freq_meter = self.builder.get_object("hertz_disp")
+		self.stt_cell = self.builder.get_object("State_Cell")
+		self.intern_cell = self.builder.get_object("internals_frame")
+		self.main_pane = self.builder.get_object("main_pane")
 		
+		# Instantiate Virtual Hardware devices.
+		W = H.Wares()
 		# Instantiate HexVex and set which widgets show internal state.
-		self.cpu = ass.Core(
-							("acc_msb", "acc_lsb", self.builder.get_object("acc_num")),
-		
-							BLINKER=ass.LED(self.builder.get_object("machine_heartbeat")),
-							acc_lsb=ass.Bargraph(self.builder.get_object("acc_lsb").get_children()),
-							acc_msb=ass.Bargraph(self.builder.get_object("acc_msb").get_children()),
-							cach_lsb=ass.Bargraph(self.builder.get_object("cache_lsb").get_children()),
-							cach_msb=ass.Bargraph(self.builder.get_object("cache_msb").get_children()),
-							utmr_lsb=ass.Bargraph(self.builder.get_object("utmr_lsb").get_children()),
-							utmr_msb=ass.Bargraph(self.builder.get_object("utmr_msb").get_children()),
+		self.cpu = ass.Core( internals = W,
+							BLINKER=H.LED(W, self.builder.get_object("machine_heartbeat")),
+							RAVN=H.LED(W, self.builder.get_object("ravn")),
+							WAIT=H.LED(W, self.builder.get_object("wait")),
+							BOOL=H.LED(W, self.builder.get_object("bool")),
+							GRTR=H.LED(W, self.builder.get_object("grtr")),
+							EQAL=H.LED(W, self.builder.get_object("eqal")),
+							CRRY=H.LED(W, self.builder.get_object("crry")),
+							PWM=H.LED(W, self.builder.get_object("pwm")),
+							acc_lsb=H.Bargraph(W, self.builder.get_object("acc_lsb").get_children()),
+							acc_msb=H.Bargraph(W, self.builder.get_object("acc_msb").get_children()),
+							cach_lsb=H.Bargraph(W, self.builder.get_object("cache_lsb").get_children()),
+							cach_msb=H.Bargraph(W, self.builder.get_object("cache_msb").get_children()),
+							utmr_lsb=H.Bargraph(W, self.builder.get_object("utmr_lsb").get_children()),
+							utmr_msb=H.Bargraph(W, self.builder.get_object("utmr_msb").get_children()),
+							stmr_lsb=H.Bargraph(W, self.builder.get_object("stmr_lsb").get_children()),
+							stmr_msb=H.Bargraph(W, self.builder.get_object("stmr_msb").get_children()),
 							)
-							
+		# Mirror widgets copy the value of existing devices, so you can
+		# display the same state on different widgets.
+		mirrors = (
+					(W.acc_msb, W.acc_lsb, self.builder.get_object("acc_num")),
+					)
+		for each in mirrors:			
+			m, l, widget = each
+			tacked = H.TackOnSTT(m, l, widget)
+			m.mirrors.append(tacked)
+			l.mirrors.append(tacked)
+					
 		#Instantiate and setup peripherals		
 		devices = [
 				#( {"both_addr": 0x0a}, ass.Num_Disp(self.builder.get_object("reg_a")) ),  # Device with only output
@@ -154,17 +179,13 @@ TO_FLAGS(out, 0)
 			}
 		for addr, each in modules.items():
 			name, logos = each
-			inst = ass.ALU(name, logos)
+			inst = H.ALU(W, name, logos)
 			self.cpu.add(inst, write_addr=addr)
 
 		
 	# Example signal handler:
 	#def foo(self, widget, data=None):
 	#	print("bar")
-
-	def pause(self, widget):
-		pass
-
 	def execute(self, widget):
 		start = self.mem.get_start_iter()
 		end = self.mem.get_end_iter()
@@ -172,17 +193,58 @@ TO_FLAGS(out, 0)
 		
 		self.cpu(raw_program)
 		
+		self.clkstp.set_active(False)
+		if sett.save_with_exec:
+			self.save_prog()
+		
 
-	def load_file(self, *foo):
-		pass
-	def smart_load(self, *foo):
-		pass
+	def load_file(self, *foo, flnm=None):
+		if flnm:
+			url = flnm
+		else:
+			url = self.fileLt.get_active_text()
+			url = self.fetch_files[url]
+		if url in self.fetch_files.values():
+			with open(url) as fl:
+				prog = fl.read()
+			self.mem.set_text(prog)
+			self.clkstp.set_active(True)
+			return True
+		else:
+			return False
+		
+	def smart_load(self, widget):
+		name = self.fileLt.get_active_text()
+		if not name[-5:] == ".xasm":
+			url = name+".xasm"
+			name = name.title()
+		else:
+			url = name
+			name = name[:-5].title()
+		if len(name) >= 3:
+			if not self.load_file(sett.prog_dir+url):
+				self.load("template")
+				widget.set_text(name)
+				self.fetch_files[name] = sett.prog_dir+url
+				san_id = "_".join(name.lower().split(" "))
+				self.fileLt.prepend(san_id,name)
+	
+	def save_prog(self, *foo):
+		start = self.mem.get_start_iter()
+		end = self.mem.get_end_iter()
+		raw_program = self.mem.get_text(start, end, False)
+
+		with open(self.fetch_files[self.fileLt.get_active_text()], "w") as fl:
+			fl.write(raw_program)
+			
 	def set_numbase(self, *foo):
 		pass
-	def hide_internals(self, *foo):
-		pass
-	def hide_state(self, *foo):
-		pass
+	def hide_internals(self, widget):
+		pick = ("show", "hide")
+		getattr(self.intern_cell, pick[widget.get_active()])()
+	def hide_state(self, widget):
+		pick = ("show", "hide")
+		getattr(self.stt_cell, pick[widget.get_active()])()
 
 if __name__ == "__main__":
 	print("oopsies.")

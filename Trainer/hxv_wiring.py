@@ -6,113 +6,112 @@ __author__ = "Diogo JC Duarte"
 __version__ = "0.1.0"
 __license__ = "GNU GPL-3.0"
 
-def wrap(inp, limit):
-	return inp % limit
+from some_functions import *
+from devices import *
 
-def split_hex(inp=0):
-	out = wrap(inp, 0x10000)
-	out = bin(abs(out))[2:18].zfill(16)
-	msb = out[0:8]
-	lsb = out[8:16]
-	lsb = int(lsb, 2)
-	msb = int(msb, 2)
-	return (msb, lsb)
-
-def join_byte(msb=0, lsb=0):
-	msb = bin(wrap(msb,0x100))[2:10].zfill(8)
-	lsb = bin(wrap(lsb,0x100))[2:10].zfill(8)
-	out = msb+lsb
-	out = int(out, 2)
-	return out
-
-## Device primitives:
-
-class Flip_Flop:
+class Wares:
+	
 	def __init__(self):
-		self.value = False
+		## SPECIAL DEVICES:
+
+		self.pntr_lsb = Register(self)  # Program pointer or Memory address
+		self.pntr_msb = Register(self)  # Program pointer or Memory address
+		self.gobak_lsb = Register(self)
+		self.gobak_msb = Register(self)
+		self.cont_lsb = Register(self)
+		self.cont_msb = Register(self)
+
+		self.BLINKER = Flip_Flop(self)  # Shows the system clock state
+
+		self.M_BUS = Register(self)  # Main Bus
+		self.A_BUS = Register(self)  # Auxiliary Bus
+		self.I_BUS = Register(self)  # ALU BUS ("I" for "Integration")
+		self.I_FLAG = Flip_Flop(self)  # Accumulator trigger flag
+
+		# State Registers
+		self.RAVN = Flip_Flop(self)
+		self.WAIT = Flip_Flop(self)
+		#---Checked against instruction conditionals
+		self.BOOL = Flip_Flop(self)
+		self.EQAL = Flip_Flop(self)
+		self.GRTR = Flip_Flop(self)
+		self.CRRY = Flip_Flop(self)
+		#---
+		self.PWM = Flip_Flop(self)
+		self.UTR = Flip_Flop(self)
+		# weird ones
+		self.JMP = Flip_Flop(self)
+		#---
+
+		self.cach_lsb = Register(self)
+		self.cach_msb = Register(self)
+
+		self.acc_lsb = Register(self)
+		self.acc_msb = Register(self)
+		self.stmr_lsb = Register(self)
+		self.stmr_msb = Register(self)
+		self.utmr_lsb = Register(self)
+		self.utmr_msb = Register(self)
+			
+		## :SPECIAL DEVICES
 	
-	def get(self):
-		return self.value
-	
-	def set(self, val=True):
-		if type(val) is int:
-			val = bool(int(bin(val)[-1]))
-		self.value = val
-	
-	def reset(self):
-		self.set(False)
+	## Signalling functions to internal registers:
+	# They are here rather than hxv wiring because quirks in Python would let them 
+	# be aware if the Register objects changed to other kind of register.
+	def PNTR_add(self, inp):
+		n = join_byte(self.pntr_msb.get(), self.pntr_lsb.get())
+		n += inp
+		msb, lsb = split_hex(n)
+		self.pntr_lsb.set(lsb)
+		self.pntr_msb.set(msb)
+	def PNTR_set(self, inp):
+		msb, lsb = split_hex(inp)
+		self.pntr_lsb.set(lsb)
+		self.pntr_msb.set(msb)
+	def PNTR(self):
+		return join_byte(self.pntr_msb.get(), self.pntr_lsb.get())
+	def GOBAK_set(self, inp):
+		msb, lsb = split_hex(inp)
+		self.gobak_lsb.set(lsb)
+		self.gobak_msb.set(msb)
+	def GOBAK(self):
+		return join_byte(self.gobak_msb.get(), self.gobak_lsb.get())
+	def CONT_set(self, inp):
+		msb, lsb = split_hex(inp)
+		self.cont_lsb.set(lsb)
+		self.cont_msb.set(msb)
+	def CONT():
+		return join_byte(self.cont_msb.get(), self.cont_lsb.get())
 
-	def toggle(self):
-		self.set(not self.get())
-	
-	def setup(self):
-		pass
-		
-		
-class Register:
-	def __init__(self):
-		self.value = 0
-		self.mirrors = list()
-	
-	def get(self):
-		return self.value
-		
-	def set(self, inp=None):
-		global M_BUS
-		if inp is None:
-			inp = M_BUS.get()
-		self.value = wrap(inp, 0x100)
-		
-	def update(self):
-		for each in self.mirrors:
-			each.set()
-		
-	def setup(self):
-		pass
+	def ACC_set(self, inp):
+		msb, lsb = split_hex(inp)
+		self.acc_lsb.set(lsb)
+		self.acc_msb.set(msb)
+	def STMR_set(self, inp):
+		msb, lsb = split_hex(inp)
+		self.stmr_lsb.set(lsb)
+		self.stmr_msb.set(msb)
+	def TO_UTMR(self, inp):
+		msb, lsb = split_hex(inp)
+		self.utmr_lsb.set(lsb)
+		self.utmr_msb.set(msb)
+	def STEP_STMR(self):
+		n = join_byte(self.stmr_msb.get(), self.stmr_lsb.get())
+		if n == 0:
+			pass
+		elif n == 1:
+			self.WAIT.reset()
+		else:
+			n -= 1
+		msb, lsb = split_hex(n)
+		self.stmr_lsb.set(lsb)
+		self.stmr_msb.set(msb)
+	def STEP_UTMR(self):
+		n = join_byte(self.utmr_msb.get(), self.utmr_lsb.get())
+		n += 1
+		msb, lsb = split_hex(n)
+		self.utmr_lsb.set(lsb)
+		self.utmr_msb.set(msb)
 
+	## :Signalling functions to internal registers
 
-## :Device primitives
-
-## SPECIAL DEVICES:
-
-pntr_lsb = Register()  # Program pointer or Memory address
-pntr_msb = Register()  # Program pointer or Memory address
-gobak_lsb = Register()
-gobak_msb = Register()
-cont_lsb = Register()
-cont_msb = Register()
-
-BLINKER = Flip_Flop()  # Shows the system clock state
-
-M_BUS = Register()  # Main Bus
-A_BUS = Register()  # Auxiliary Bus
-I_BUS = Register()  # ALU BUS ("I" for "Integration")
-I_FLAG = Flip_Flop()  # Accumulator trigger flag
-
-# State Registers
-RAVN = Flip_Flop()
-WAIT = Flip_Flop()
-#---Checked against instruction conditionals
-BOOL = Flip_Flop()
-EQAL = Flip_Flop()
-GRTR = Flip_Flop()
-CRRY = Flip_Flop()
-#---
-PWM = Flip_Flop()
-UTR = Flip_Flop()
-# weird ones
-JMP = Flip_Flop()
-#---
-
-cach_lsb = Register()
-cach_msb = Register()
-
-acc_lsb = Register()
-acc_msb = Register()
-stmr_lsb = Register()
-stmr_msb = Register()
-utmr_lsb = Register()
-utmr_msb = Register()
-
-		
-## :SPECIAL DEVICES

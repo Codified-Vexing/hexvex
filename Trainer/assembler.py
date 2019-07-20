@@ -11,23 +11,21 @@ __license__ = "GNU GPL-3.0"
 # -For devices that take input from widgets, there needs to be events connected
 # to these devices' methods. If the devices are eliminated, the bindings need
 # to be dealt with somehow.
-# -Make the global stuff into an encapsulated class, maybe?
 
 import configuration as sett
-from hxv_wiring import *
-from devices import *
+from some_functions import *
 
 from os.path import dirname
 
 condition = {
-			"_":(0x0, "not WAIT.get()"),
-			":":(0x1, "CRRY.get()"),
-			"+":(0x2, "BOOL.get()"),
-			"-":(0x3, "not BOOL.get()"),
-			"!":(0x4, "not EQAL.get()"),
-			">":(0x5, "GRTR.get()"),
-			"<":(0x6, "not GRTR.get()"),
-			"=":(0x7, "EQAL.get()"),
+			"_":(0x0, "not self.I.WAIT.get()"),
+			":":(0x1, "self.I.CRRY.get()"),
+			"+":(0x2, "self.I.BOOL.get()"),
+			"-":(0x3, "not self.I.BOOL.get()"),
+			"!":(0x4, "not self.I.EQAL.get()"),
+			">":(0x5, "self.I.GRTR.get()"),
+			"<":(0x6, "not self.I.GRTR.get()"),
+			"=":(0x7, "self.I.EQAL.get()"),
 			}
 
 oper = {
@@ -59,74 +57,14 @@ oper = {
 		"pwm":(0x2b, "pwm"),
 		}
 
-## Signalling functions to internal registers:
-# They are here rather than hxv wiring because quirks in Python would let them 
-# be aware if the Register objects changed to other kind of register.
-
-def PNTR_add(inp):
-	n = join_byte(pntr_msb.get(), pntr_lsb.get())
-	n += inp
-	msb, lsb = split_hex(n)
-	pntr_lsb.set(lsb)
-	pntr_msb.set(msb)
-def PNTR_set(inp):
-	msb, lsb = split_hex(inp)
-	pntr_lsb.set(lsb)
-	pntr_msb.set(msb)
-def PNTR():
-	return join_byte(pntr_msb.get(), pntr_lsb.get())
-def GOBAK_set(inp):
-	msb, lsb = split_hex(inp)
-	gobak_lsb.set(lsb)
-	gobak_msb.set(msb)
-def GOBAK():
-	return join_byte(gobak_msb.get(), gobak_lsb.get())
-def CONT_set(inp):
-	msb, lsb = split_hex(inp)
-	cont_lsb.set(lsb)
-	cont_msb.set(msb)
-def CONT():
-	return join_byte(cont_msb.get(), cont_lsb.get())
-
-def ACC_set(inp):
-	msb, lsb = split_hex(inp)
-	acc_lsb.set(lsb)
-	acc_msb.set(msb)
-def STMR_set(inp):
-	msb, lsb = split_hex(inp)
-	stmr_lsb.set(lsb)
-	stmr_msb.set(msb)
-def TO_UTMR(inp):
-	msb, lsb = split_hex(inp)
-	utmr_lsb.set(lsb)
-	utmr_msb.set(msb)
-def STEP_STMR():
-	n = join_byte(stmr_msb.get(), stmr_lsb.get())
-	if n == 0:
-		pass
-	elif n == 1:
-		WAIT.reset()
-	else:
-		n -= 1
-	msb, lsb = split_hex(n)
-	stmr_lsb.set(lsb)
-	stmr_msb.set(msb)
-def STEP_UTMR():
-	n = join_byte(utmr_msb.get(), utmr_lsb.get())
-	n += 1
-	msb, lsb = split_hex(n)
-	utmr_lsb.set(lsb)
-	utmr_msb.set(msb)
-
-## :Signalling functions to internal registers
-
 def instr(inp):
 	# Given a memory pointer, figure out the instruction number.
 	return int(inp/8)
 
 
 class Core:
-	def __init__(self, *mirrors, **devices):
+	def __init__(self, internals, **devices):
+		self.I = internals
 		self.__call__("_nhalt")  # Start with a default program.
 		self.g_point = 0  # pointer for «gobak» opcode
 		self.c_point = 0  # pointer for «cont» opcode
@@ -135,57 +73,51 @@ class Core:
 		# The structure of these is: {addr = [Peripheral1, Peripheral2], }
 		self.read = dict()
 		self.write = dict()
-		
 		# Internal Devices:
 		# Updating the status of the device.
 		for each, device in devices.items():
-			globals()[each] = device
-		# Mirror widgets copy the value of existing devices, so you can
-		# display the same state on different widgets.
-		for each in mirrors:			
-			m, l, widget = each
-			m = globals()[m]
-			l = globals()[l]
-			tacked = TackOn16(m, l, widget)
-			m.mirrors.append(tacked)
-			l.mirrors.append(tacked)
+			setattr(self.I, each, device)
 		
 		# To call these by name, use the global variables mentioned.
 		# Here we connect the internal devices that can access the Store.
-		self.add(acc_lsb, read_addr=0xda)
-		self.add(acc_msb, read_addr=0xdb)
+		self.add(self.I.acc_lsb, read_addr=0xda)
+		self.add(self.I.acc_msb, read_addr=0xdb)
+		self.add(self.I.utmr_lsb, read_addr=0xd1)
+		self.add(self.I.utmr_msb, read_addr=0xd2)
+		self.add(self.I.cach_lsb, read_addr=0xc1)
+		self.add(self.I.cach_msb, read_addr=0xc2)
 		
 	def __next__(self):
 		# Compute an instruction
-		if WAIT.get():
+		if self.I.WAIT.get():
 			#print("HexVex is halted...")
-			STEP_STMR()
-		elif instr(PNTR()) >= len(self.PROG):
+			self.I.STEP_STMR()
+		elif instr(self.I.PNTR()) >= len(self.PROG):
 			# the program is empty.
 			print("The program is empty!")
 			self.decoder[0].nhalt(0)
 		else:
-			line = self.PROG[instr(PNTR())]
+			line = self.PROG[instr(self.I.PNTR())]
 			permit = eval(line["cond"])
 			if permit:
-				if PNTR() % 8 == 0:
+				if self.I.PNTR() % 8 == 0:
 					# Cleaning up...
-					if I_FLAG.get():
-						ACC_set(I_BUS.get())
-						I_FLAG.reset()
-					M_BUS.set(0)
-					A_BUS.set(0)
-					JMP.reset()
-				elif PNTR() % 8 == 2:
+					if self.I.I_FLAG.get():
+						self.I.ACC_set(self.I.I_BUS.get())
+						self.I.I_FLAG.reset()
+					self.I.M_BUS.set(0)
+					self.I.A_BUS.set(0)
+					self.I.JMP.reset()
+				elif self.I.PNTR() % 8 == 2:
 					getattr(self.decoder[0], line["opcode"])(line["arg"])
-				elif PNTR() % 8 == 4:
+				elif self.I.PNTR() % 8 == 4:
 					getattr(self.decoder[1], line["opcode"])(line["arg"])
-				elif PNTR() % 8 == 6:
+				elif self.I.PNTR() % 8 == 6:
 					pass	
 
-		if not JMP.get():
-			PNTR_add(1)
-		BLINKER.toggle()
+		if not self.I.JMP.get():
+			self.I.PNTR_add(1)
+		self.I.BLINKER.toggle()
 			
 	def __call__(self, prog):
 		self.stt_reset()
@@ -297,24 +229,24 @@ class Core:
 		
 	def stt_reset(self):
 		self.PROG = list()
-		PNTR_set(0)
-		GOBAK_set(0)
-		CONT_set(0)
-		M_BUS.set(0)
-		A_BUS.set(0)
-		ACC_set(0)
-		STMR_set(0)
-		TO_UTMR(0)
+		self.I.PNTR_set(0)
+		self.I.GOBAK_set(0)
+		self.I.CONT_set(0)
+		self.I.M_BUS.set(0)
+		self.I.A_BUS.set(0)
+		self.I.ACC_set(0)
+		self.I.STMR_set(0)
+		self.I.TO_UTMR(0)
 		# State Registers
-		RAVN.reset()
-		WAIT.reset()
-		BOOL.reset()
-		EQAL.reset()
-		GRTR.reset()
-		CRRY.reset()
-		PWM.reset()
-		UTR.reset()
-		JMP.reset()
+		self.I.RAVN.reset()
+		self.I.WAIT.reset()
+		self.I.BOOL.reset()
+		self.I.EQAL.reset()
+		self.I.GRTR.reset()
+		self.I.CRRY.reset()
+		self.I.PWM.reset()
+		self.I.UTR.reset()
+		self.I.JMP.reset()
 		print("System has been reset!")
 
 
@@ -323,7 +255,8 @@ class Core:
 
 class Decoder:
 	def __init__(self, core):
-		self.core = core
+		self.c = core
+		
 	def __getattr__(self, attr):
 		print("OPCODE ILLEGAL")
 
@@ -332,8 +265,8 @@ class Stage1(Decoder):
 	#SYS
 	def nhalt(self, inp):
 		print("--HEXVEX IS HALTED--")
-		STMR_set(inp)
-		WAIT.set()
+		self.c.I.STMR_set(inp)
+		self.c.I.WAIT.set()
 	def rhalt(self, inp):
 		pass
 	def chalt(self, inp):
@@ -342,41 +275,41 @@ class Stage1(Decoder):
 		pass
 	def tell(self, inp):
 		addr, num = split_hex(inp)
-		A_BUS.set(num)
+		self.c.I.A_BUS.set(num)
 	#GOTO	
 	def ngoto(self, inp):
 		msb, lsb = split_hex(inp)
-		M_BUS.set(lsb)
-		A_BUS.set(msb)
-		GOBAK_set(PNTR()-1)
+		self.c.I.M_BUS.set(lsb)
+		self.c.I.A_BUS.set(msb)
+		self.c.I.GOBAK_set(self.c.I.PNTR()-1)
 	def rgoto(self, inp):
-		M_BUS.set()
-		A_BUS.set(acc_lsb.get())
-		GOBAK_set(PNTR()-1)
+		self.c.I.M_BUS.set()
+		self.c.I.A_BUS.set(self.c.I.acc_lsb.get())
+		self.c.I.GOBAK_set(self.c.I.PNTR()-1)
 	def cgoto(self, inp):
-		GOBAK_set(PNTR()-1)
+		self.c.I.GOBAK_set(self.c.I.PNTR()-1)
 	def cont(self, inp):
-		GOBAK_set(PNTR()-1)
+		self.c.I.GOBAK_set(self.c.I.PNTR()-1)
 	def gobak(self, inp):
 		# Gobak doesn't set itself to go to itself.
 		pass
 	def rept(self, inp):
-		GOBAK_set(PNTR()-1)
+		self.c.I.GOBAK_set(self.c.I.PNTR()-1)
 	#MOVE
 	def nmove(self, inp):
 		n, device = split_hex(inp)
-		M_BUS.set(n)
-		A_BUS.set(acc_lsb.get())
+		self.c.I.M_BUS.set(n)
+		self.c.I.A_BUS.set(self.c.I.acc_lsb.get())
 	def rmove(self, inp):
 		n = 0
 		src_addr, tgt_addr = split_hex(inp)
-		tgts = self.core.read.get(src_addr, list())
+		tgts = self.c.read.get(src_addr, list())
 		if len(tgts) >= 2:
 			print("Short circuit between Peripherals detected!")
 		for reg in tgts:
 			n = n | reg.get()
-		M_BUS.set(n)
-		A_BUS.set(acc_lsb.get())
+		self.c.I.M_BUS.set(n)
+		self.c.I.A_BUS.set(self.c.I.acc_lsb.get())
 	def accfet(self, inp):
 		pass
 	def hexfet(self, inp):
@@ -408,8 +341,8 @@ class Stage2(Decoder):
 	##The operations:
 	#SYS
 	def poke(self, addr):
-		regs = set(self.core.read.get(addr, list()))
-		regs ^= set(self.core.write.get(addr, list()))
+		regs = set(self.c.read.get(addr, list()))
+		regs ^= set(self.c.write.get(addr, list()))
 		regs = list(regs)
 
 		for each in regs:
@@ -419,17 +352,17 @@ class Stage2(Decoder):
 		self.poke(addr)
 	#GOTO
 	def ngoto(self, inp):
-		n = join_byte(A_BUS.get(), M_BUS.get())
-		JMP.set()
-		PNTR_set(n)
+		n = join_byte(self.c.I.A_BUS.get(), self.c.I.M_BUS.get())
+		self.c.I.JMP.set()
+		self.c.I.PNTR_set(n)
 	def gobak(self, inp):
-		where = GOBAK + inp
-		JMP.set()
-		PNTR_set(where)
+		where = self.c.I.GOBAK + inp
+		self.c.I.JMP.set()
+		self.c.I.PNTR_set(where)
 	#MOVE
 	def nmove(self, inp):
 		n, addr = split_hex(inp)
-		tgts = self.core.write.get(addr, list())
+		tgts = self.c.write.get(addr, list())
 		for each in tgts:
 			each.set()
 	def rmove(self, inp):

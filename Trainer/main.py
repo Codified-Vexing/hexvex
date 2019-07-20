@@ -7,8 +7,8 @@ __author__ = "Diogo JC Duarte"
 __version__ = "0.1.0"
 __license__ = "GNU GPL-3.0"
 
-# TODO:
-# Make more files imported into here so stuff is better organized. Eg. configs
+from os import walk
+import os.path as ospath
 
 import configuration as sett
 from environment import Environ
@@ -40,6 +40,21 @@ class WindowMain (Environ):
 		self.set_clkspeed()
 		self.looptime = gob.timeout_add(200, self.looper)
 		
+		self.fetch_files = {"New_Program": "template",}
+		for (dirpath, dirnames, filenames) in walk(sett.prog_dir):
+			filenames
+		for n, each in enumerate(filenames):
+			entr = ospath.splitext(each)[0].title()
+			self.fetch_files[entr] = sett.prog_dir+each
+			san_id = "_".join(entr.lower().split(" "))
+						
+			self.fileLt.prepend(san_id,entr)
+			
+		if sett.open_last_save:
+			self.load_file(sett.open_last_save)
+		
+		self.main_pane.set_position(sett.pane_handle_position)
+		
 		# Get the signals. After doing initial stuff to the UI, so that it doesn't trigger the callbacks.
 		#self  <-- When you don't care. Just do the default stuff
 		#{"signal": (callback, arg1, arg2, etc) , }  <-- each arg is whatever the signal emits when triggered, according to the docs.
@@ -64,6 +79,8 @@ class WindowMain (Environ):
 	
 	def finish_it(self, widget=None, data=None):
 		print("Quitting...")
+		sett.pane_handle_position = self.main_pane.get_position()
+		
 		self.mainwin.destroy()
 		g.main_quit()
 		# Do «self.finish_it()» to exit by other means than pressing the window cross.
@@ -78,6 +95,8 @@ class WindowMain (Environ):
 			val = sett.max_hz*val**(4)
 			
 			val = round(val, 3)
+			if val < 0.01:
+				val = 0.01
 			sett.CLK = val
 			
 		self.freq_meter.set_text(str(sett.CLK))	
@@ -89,6 +108,17 @@ class WindowMain (Environ):
 		# steps, triggered by each real tick.
 		self.clkStepTime = gob.timeout_add(int((1/sett.CLK*1000)/2), self.metronome)
 		
+	def clockstopper(self, widget):
+		if widget.get_active():
+			gob.source_remove(self.clkStepTime)
+			self.clkStepTime = None
+		else:
+			self.set_clkspeed()
+	
+	def step_clock(self, widget):
+		# TODO: Always fall on a "low state" of the clock, in the half-tick between executions of some process.
+		self.metronome()
+		self.metronome()
 	
 	
 if __name__ == "__main__":
