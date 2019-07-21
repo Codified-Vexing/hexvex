@@ -119,6 +119,7 @@ class WindowMain (Environ):
 		# TODO: Always fall on a "low state" of the clock, in the half-tick between executions of some process.
 		self.metronome()
 		self.metronome()
+		
 	
 	
 if __name__ == "__main__":

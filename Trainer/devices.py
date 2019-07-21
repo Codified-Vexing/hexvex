@@ -256,8 +256,8 @@ class TackOnSTT:
 	def set(self):
 		val = join_byte(self.msb.get(), self.lsb.get())
 		if sett.hex_format_stt:
-			self.disp.set_text(hex(val)[2:].zfill(3))
+			self.disp.set_text(hex(val)[2:].zfill(4))
 		else:
-			self.disp.set_text(str(val).zfill(3))
+			self.disp.set_text(str(val).zfill(5))
 
 

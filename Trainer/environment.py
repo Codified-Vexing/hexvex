@@ -9,6 +9,9 @@ import configuration as sett
 import assembler as ass
 import hxv_wiring as H
 
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk as g
 
 class Environ:
 
@@ -26,13 +29,15 @@ class Environ:
 
 		# Get widget references
 		#self.id = self.builder.get_object("id")
+		self.main_pane = self.builder.get_object("main_pane")
+		self.devcLt = self.builder.get_object("device_list")
+		self.devc_kind = self.builder.get_object("device_picker")
 		self.fileLt = self.builder.get_object("file_list")
 		self.mem = self.builder.get_object("assm_area")
 		self.clkstp = self.builder.get_object("freeze_butt")
 		self.freq_meter = self.builder.get_object("hertz_disp")
 		self.stt_cell = self.builder.get_object("State_Cell")
 		self.intern_cell = self.builder.get_object("internals_frame")
-		self.main_pane = self.builder.get_object("main_pane")
 		
 		# Instantiate Virtual Hardware devices.
 		W = H.Wares()
@@ -59,6 +64,9 @@ class Environ:
 		# display the same state on different widgets.
 		mirrors = (
 					(W.acc_msb, W.acc_lsb, self.builder.get_object("acc_num")),
+					(W.cach_msb, W.cach_lsb, self.builder.get_object("cache_num")),
+					(W.utmr_msb, W.utmr_lsb, self.builder.get_object("utmr_num")),
+					(W.stmr_msb, W.stmr_lsb, self.builder.get_object("stmr_num")),
 					)
 		for each in mirrors:			
 			m, l, widget = each
@@ -203,15 +211,15 @@ TO_FLAGS(out, 0)
 			url = flnm
 		else:
 			url = self.fileLt.get_active_text()
-			url = self.fetch_files[url]
-		if url in self.fetch_files.values():
-			with open(url) as fl:
-				prog = fl.read()
-			self.mem.set_text(prog)
-			self.clkstp.set_active(True)
-			return True
-		else:
-			return False
+			if url in self.fetch_files.keys():
+				url = self.fetch_files[url]
+			else:
+				return False
+		with open(url) as fl:
+			prog = fl.read()
+		self.mem.set_text(prog)
+		self.clkstp.set_active(True)
+		return True
 		
 	def smart_load(self, widget):
 		name = self.fileLt.get_active_text()
@@ -223,7 +231,7 @@ TO_FLAGS(out, 0)
 			name = name[:-5].title()
 		if len(name) >= 3:
 			if not self.load_file(sett.prog_dir+url):
-				self.load("template")
+				self.load_file(flnm="template")
 				widget.set_text(name)
 				self.fetch_files[name] = sett.prog_dir+url
 				san_id = "_".join(name.lower().split(" "))
@@ -237,14 +245,22 @@ TO_FLAGS(out, 0)
 		with open(self.fetch_files[self.fileLt.get_active_text()], "w") as fl:
 			fl.write(raw_program)
 			
-	def set_numbase(self, *foo):
-		pass
 	def hide_internals(self, widget):
 		pick = ("show", "hide")
 		getattr(self.intern_cell, pick[widget.get_active()])()
 	def hide_state(self, widget):
 		pick = ("show", "hide")
 		getattr(self.stt_cell, pick[widget.get_active()])()
+	
+	def add_peripheral(self, widget):
+		print(self.devc_kind.get_active_text())
+	
+	def add_comment(self, widget):
+		print("a comment box")
+		#comment = g.TextView()
+		#comment = g.Label("A New Comment")
+		#self.devcLt.add(comment)
+		pass
 
 if __name__ == "__main__":
 	print("oopsies.")

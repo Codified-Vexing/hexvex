@@ -84,18 +84,22 @@ class Core:
 		self.add(self.I.acc_msb, read_addr=0xdb)
 		self.add(self.I.utmr_lsb, read_addr=0xd1)
 		self.add(self.I.utmr_msb, read_addr=0xd2)
-		self.add(self.I.cach_lsb, read_addr=0xc1)
-		self.add(self.I.cach_msb, read_addr=0xc2)
+		self.add(self.I.cach_lsb, both_addr=0xc1)
+		self.add(self.I.cach_msb, both_addr=0xc2)
 		
 	def __next__(self):
 		# Compute an instruction
+		DIGITAL_HIGH = self.I.PNTR() % 2 == 0
+		if self.I.UTMR.get() and DIGITAL_HIGH:
+			self.I.STEP_UTMR()
+			
 		if self.I.WAIT.get():
 			#print("HexVex is halted...")
-			self.I.STEP_STMR()
+			if DIGITAL_HIGH:
+				self.I.STEP_STMR()
 		elif instr(self.I.PNTR()) >= len(self.PROG):
-			# the program is empty.
 			print("The program is empty!")
-			self.decoder[0].nhalt(0)
+			self.decoder[1].nhalt(0)
 		else:
 			line = self.PROG[instr(self.I.PNTR())]
 			permit = eval(line["cond"])
@@ -109,9 +113,15 @@ class Core:
 					self.I.A_BUS.set(0)
 					self.I.JMP.reset()
 				elif self.I.PNTR() % 8 == 2:
-					getattr(self.decoder[0], line["opcode"])(line["arg"])
+					try:
+						getattr(self.decoder[0], line["opcode"])(line["arg"])
+					except:
+						print("Failed to process at Stage 1:", line)
 				elif self.I.PNTR() % 8 == 4:
-					getattr(self.decoder[1], line["opcode"])(line["arg"])
+					try:
+						getattr(self.decoder[1], line["opcode"])(line["arg"])
+					except:
+						print("Failed to process at Stage 2:", line)
 				elif self.I.PNTR() % 8 == 6:
 					pass	
 
@@ -229,15 +239,18 @@ class Core:
 		
 	def stt_reset(self):
 		self.PROG = list()
+		# Pointer keepers
 		self.I.PNTR_set(0)
 		self.I.GOBAK_set(0)
 		self.I.CONT_set(0)
+		# Internal Registers
 		self.I.M_BUS.set(0)
 		self.I.A_BUS.set(0)
 		self.I.ACC_set(0)
 		self.I.STMR_set(0)
-		self.I.TO_UTMR(0)
-		# State Registers
+		self.I.UTMR_set(0)
+		self.I.CACH_set(0)
+		# State Flags
 		self.I.RAVN.reset()
 		self.I.WAIT.reset()
 		self.I.BOOL.reset()
@@ -245,7 +258,7 @@ class Core:
 		self.I.GRTR.reset()
 		self.I.CRRY.reset()
 		self.I.PWM.reset()
-		self.I.UTR.reset()
+		self.I.UTMR.reset()
 		self.I.JMP.reset()
 		print("System has been reset!")
 
@@ -264,9 +277,7 @@ class Stage1(Decoder):
 	##The operations:
 	#SYS
 	def nhalt(self, inp):
-		print("--HEXVEX IS HALTED--")
-		self.c.I.STMR_set(inp)
-		self.c.I.WAIT.set()
+		pass
 	def rhalt(self, inp):
 		pass
 	def chalt(self, inp):
@@ -311,28 +322,40 @@ class Stage1(Decoder):
 		self.c.I.M_BUS.set(n)
 		self.c.I.A_BUS.set(self.c.I.acc_lsb.get())
 	def accfet(self, inp):
-		pass
+		self.c.I.M_BUS.set(self.c.I.acc_lsb.get())
+		self.c.I.A_BUS.set(self.c.I.acc_msb.get())
 	def hexfet(self, inp):
-		pass
+		msb, lsb = split_hex(inp)
+		self.c.I.M_BUS.set(lsb)
+		self.c.I.A_BUS.set(msb)
 	def utfet(self, inp):
-		pass
+		self.c.I.M_BUS.set(self.c.I.utmr_lsb.get())
+		self.c.I.A_BUS.set(self.c.I.utmr_msb.get())
 	def xfeed(self, inp):
 		pass
 	#TIMER
-	def toggle(self, inp):
-		pass
+	def toggle(self, inp): pass
 	def nstart(self, inp):
-		pass
+		msb, lsb = split_hex(inp)
+		self.c.I.M_BUS.set(lsb)
+		self.c.I.A_BUS.set(msb)
 	def rstart(self, inp):
-		pass
+		bogus, src_addr = split_hex(inp)
+		tgts = self.c.read.get(src_addr, list())
+		if len(tgts) >= 2:
+			print("Short circuit between Peripherals detected!")
+		for reg in tgts:
+			n = n | reg.get()
+		self.c.I.M_BUS.set(n)
 	def cstart(self, inp):
-		pass
+		self.c.I.M_BUS.set(self.c.I.cach_lsb.get())
+		self.c.I.A_BUS.set(self.c.I.cach_msb.get())
 	def nset(self, inp):
-		pass
+		self.nstart(inp)
 	def rset(self, inp):
-		pass
+		self.rstart(inp)
 	def cset(self, inp):
-		pass
+		self.cstart(inp)
 	def pwm(self, inp):
 		pass
 
@@ -340,6 +363,10 @@ class Stage1(Decoder):
 class Stage2(Decoder):
 	##The operations:
 	#SYS
+	def nhalt(self, inp):
+		print("--HEXVEX IS HALTED--")
+		self.c.I.STMR_set(inp)
+		self.c.I.WAIT.set()
 	def poke(self, addr):
 		regs = set(self.c.read.get(addr, list()))
 		regs ^= set(self.c.write.get(addr, list()))
@@ -367,10 +394,34 @@ class Stage2(Decoder):
 			each.set()
 	def rmove(self, inp):
 		self.nmove(inp)
+	def accfet(self, inp):
+		self.c.I.cach_lsb.set(self.c.I.M_BUS.get())
+		self.c.I.cach_msb.set(self.c.I.A_BUS.get())
+	def hexfet(self, inp):
+		self.accfet(inp)
+	def utfet(self, inp):
+		self.accfet(inp)
 	#TIMER
+	def toggle(self, inp):
+		self.c.I.UTMR.toggle()
+	def nstart(self, inp):
+		self.c.I.UTMR.set()  # set flag
+		n = join_byte(self.c.I.A_BUS.get(), self.c.I.M_BUS.get())
+		self.c.I.UTMR_set(n)  # set register
+	def rstart(self, inp):
+		self.nstart(inp)
+	def cstart(self, inp):
+		self.nstart(inp)
+	def nset(self, inp):
+		n = join_byte(self.c.I.A_BUS.get(), self.c.I.M_BUS.get())
+		self.c.I.UTMR_set(n)  # set register
+	def rset(self, inp):
+		self.nset(inp)
+	def cset(self, inp):
+		self.nset(inp)
+	
 	
 ## :INSTRUCTION DECODERS
-
 
 if __name__ == "__main__":
 	print("oopsies.")

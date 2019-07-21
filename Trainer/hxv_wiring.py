@@ -38,7 +38,7 @@ class Wares:
 		self.CRRY = Flip_Flop(self)
 		#---
 		self.PWM = Flip_Flop(self)
-		self.UTR = Flip_Flop(self)
+		self.UTMR = Flip_Flop(self)
 		# weird ones
 		self.JMP = Flip_Flop(self)
 		#---
@@ -87,11 +87,15 @@ class Wares:
 		msb, lsb = split_hex(inp)
 		self.acc_lsb.set(lsb)
 		self.acc_msb.set(msb)
+	def CACH_set(self, inp):
+		msb, lsb = split_hex(inp)
+		self.cach_lsb.set(lsb)
+		self.cach_msb.set(msb)
 	def STMR_set(self, inp):
 		msb, lsb = split_hex(inp)
 		self.stmr_lsb.set(lsb)
 		self.stmr_msb.set(msb)
-	def TO_UTMR(self, inp):
+	def UTMR_set(self, inp):
 		msb, lsb = split_hex(inp)
 		self.utmr_lsb.set(lsb)
 		self.utmr_msb.set(msb)
