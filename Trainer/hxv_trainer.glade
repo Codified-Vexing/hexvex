@@ -231,19 +231,14 @@ Diogo JC Duarte
         </child>
         <child>
           <object class="GtkButton">
+            <property name="label">gtk-execute</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
             <property name="tooltip_text" translatable="yes">Execute the code and save assembly program to file</property>
+            <property name="use_stock">True</property>
+            <property name="always_show_image">True</property>
             <signal name="clicked" handler="execute" swapped="no"/>
-            <child>
-              <object class="GtkImage">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="stock">gtk-execute</property>
-                <property name="icon_size">3</property>
-              </object>
-            </child>
           </object>
           <packing>
             <property name="position">2</property>
@@ -476,7 +471,6 @@ Diogo JC Duarte
               <object class="GtkNotebook">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="enable_popup">True</property>
                 <child>
                   <object class="GtkBox" id="content-tool-frame">
                     <property name="visible">True</property>
@@ -495,6 +489,7 @@ Diogo JC Duarte
                               <object class="GtkBox" id="registers_frame">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
+                                <property name="margin_right">12</property>
                                 <child>
                                   <object class="GtkBox" id="user_registers_frame">
                                     <property name="visible">True</property>
@@ -573,89 +568,87 @@ Diogo JC Duarte
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkListBox">
+                                      <object class="GtkBox" id="device_list">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
+                                        <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="GtkListBoxRow">
-                                            <property name="width_request">100</property>
-                                            <property name="height_request">80</property>
+                                          <object class="GtkBox">
                                             <property name="visible">True</property>
-                                            <property name="can_focus">True</property>
+                                            <property name="can_focus">False</property>
                                             <child>
-                                              <object class="GtkBox">
+                                              <object class="GtkEntry">
+                                                <property name="visible">True</property>
+                                                <property name="can_focus">True</property>
+                                                <property name="max_length">6</property>
+                                                <property name="width_chars">6</property>
+                                                <property name="max_width_chars">4</property>
+                                                <property name="text" translatable="yes">170</property>
+                                                <property name="input_purpose">digits</property>
+                                              </object>
+                                              <packing>
+                                                <property name="expand">False</property>
+                                                <property name="fill">True</property>
+                                                <property name="position">0</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkEntry">
+                                                <property name="visible">True</property>
+                                                <property name="can_focus">True</property>
+                                                <property name="width_chars">6</property>
+                                                <property name="text" translatable="yes">0</property>
+                                                <property name="input_purpose">digits</property>
+                                              </object>
+                                              <packing>
+                                                <property name="expand">False</property>
+                                                <property name="fill">True</property>
+                                                <property name="position">1</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkImage">
                                                 <property name="visible">True</property>
                                                 <property name="can_focus">False</property>
-                                                <child>
-                                                  <object class="GtkEntry">
-                                                    <property name="visible">True</property>
-                                                    <property name="can_focus">True</property>
-                                                    <property name="max_length">6</property>
-                                                    <property name="width_chars">6</property>
-                                                    <property name="max_width_chars">4</property>
-                                                    <property name="text" translatable="yes">170</property>
-                                                    <property name="input_purpose">digits</property>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="expand">False</property>
-                                                    <property name="fill">True</property>
-                                                    <property name="position">0</property>
-                                                  </packing>
-                                                </child>
-                                                <child>
-                                                  <object class="GtkEntry">
-                                                    <property name="visible">True</property>
-                                                    <property name="can_focus">True</property>
-                                                    <property name="width_chars">6</property>
-                                                    <property name="text" translatable="yes">0</property>
-                                                    <property name="input_purpose">digits</property>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="expand">False</property>
-                                                    <property name="fill">True</property>
-                                                    <property name="position">1</property>
-                                                  </packing>
-                                                </child>
-                                                <child>
-                                                  <object class="GtkImage">
-                                                    <property name="visible">True</property>
-                                                    <property name="can_focus">False</property>
-                                                    <property name="stock">gtk-fullscreen</property>
-                                                    <property name="icon_size">3</property>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="expand">False</property>
-                                                    <property name="fill">True</property>
-                                                    <property name="position">2</property>
-                                                  </packing>
-                                                </child>
-                                                <child>
-                                                  <object class="GtkEntry">
-                                                    <property name="visible">True</property>
-                                                    <property name="can_focus">True</property>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="expand">True</property>
-                                                    <property name="fill">True</property>
-                                                    <property name="position">3</property>
-                                                  </packing>
-                                                </child>
-                                                <child>
-                                                  <object class="GtkButton">
-                                                    <property name="label" translatable="yes">Delete</property>
-                                                    <property name="visible">True</property>
-                                                    <property name="can_focus">True</property>
-                                                    <property name="receives_default">True</property>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="expand">False</property>
-                                                    <property name="fill">True</property>
-                                                    <property name="position">4</property>
-                                                  </packing>
-                                                </child>
+                                                <property name="stock">gtk-fullscreen</property>
+                                                <property name="icon_size">3</property>
                                               </object>
+                                              <packing>
+                                                <property name="expand">False</property>
+                                                <property name="fill">True</property>
+                                                <property name="position">2</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkEntry">
+                                                <property name="visible">True</property>
+                                                <property name="can_focus">True</property>
+                                              </object>
+                                              <packing>
+                                                <property name="expand">True</property>
+                                                <property name="fill">True</property>
+                                                <property name="position">3</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkButton">
+                                                <property name="label" translatable="yes">Delete</property>
+                                                <property name="visible">True</property>
+                                                <property name="can_focus">True</property>
+                                                <property name="receives_default">True</property>
+                                              </object>
+                                              <packing>
+                                                <property name="expand">False</property>
+                                                <property name="fill">True</property>
+                                                <property name="position">4</property>
+                                              </packing>
                                             </child>
                                           </object>
+                                          <packing>
+                                            <property name="expand">False</property>
+                                            <property name="fill">True</property>
+                                            <property name="position">0</property>
+                                          </packing>
                                         </child>
                                       </object>
                                       <packing>
@@ -668,6 +661,8 @@ Diogo JC Duarte
                                       <object class="GtkStack" id="spec_devices">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
+                                        <property name="transition_duration">1000</property>
+                                        <property name="transition_type">slide-right</property>
                                         <property name="interpolate_size">True</property>
                                         <child>
                                           <object class="GtkLabel">
@@ -706,8 +701,9 @@ Diogo JC Duarte
                                         </child>
                                       </object>
                                       <packing>
-                                        <property name="expand">True</property>
+                                        <property name="expand">False</property>
                                         <property name="fill">True</property>
+                                        <property name="pack_type">end</property>
                                         <property name="position">4</property>
                                       </packing>
                                     </child>
@@ -734,29 +730,29 @@ Diogo JC Duarte
                                   <object class="GtkBox" id="internals_frame">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
+                                    <property name="spacing">3</property>
                                     <property name="homogeneous">True</property>
                                     <child>
-                                      <object class="GtkBox">
+                                      <object class="GtkGrid">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
-                                        <property name="orientation">vertical</property>
-                                        <property name="spacing">2</property>
+                                        <property name="column_homogeneous">True</property>
                                         <child>
                                           <object class="GtkLabel">
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
+                                            <property name="margin_top">10</property>
+                                            <property name="margin_bottom">8</property>
                                             <property name="label" translatable="yes">Cache</property>
-                                            <property name="angle">270</property>
                                             <attributes>
                                               <attribute name="font-desc" value="Monospace 7"/>
                                               <attribute name="weight" value="bold"/>
                                             </attributes>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="padding">8</property>
-                                            <property name="position">0</property>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">0</property>
+                                            <property name="width">2</property>
                                           </packing>
                                         </child>
                                         <child>
@@ -764,11 +760,13 @@ Diogo JC Duarte
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <property name="label" translatable="yes">NaN</property>
+                                            <property name="angle">270</property>
+                                            <property name="yalign">0.039999999105930328</property>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">1</property>
+                                            <property name="left_attach">1</property>
+                                            <property name="top_attach">2</property>
+                                            <property name="height">2</property>
                                           </packing>
                                         </child>
                                         <child>
@@ -1010,40 +1008,50 @@ Diogo JC Duarte
                                             </child>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">2</property>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">2</property>
+                                            <property name="height">2</property>
+                                          </packing>
+                                        </child>
+                                        <child>
+                                          <object class="GtkSeparator">
+                                            <property name="visible">True</property>
+                                            <property name="can_focus">False</property>
+                                          </object>
+                                          <packing>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">1</property>
+                                            <property name="width">2</property>
                                           </packing>
                                         </child>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
                                         <property name="fill">True</property>
-                                        <property name="position">0</property>
+                                        <property name="position">4</property>
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkBox">
+                                      <object class="GtkGrid">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
-                                        <property name="orientation">vertical</property>
-                                        <property name="spacing">2</property>
+                                        <property name="column_homogeneous">True</property>
                                         <child>
                                           <object class="GtkLabel">
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
+                                            <property name="margin_top">10</property>
+                                            <property name="margin_bottom">8</property>
                                             <property name="label" translatable="yes">Accum</property>
-                                            <property name="angle">270</property>
                                             <attributes>
                                               <attribute name="font-desc" value="Monospace 7"/>
                                               <attribute name="weight" value="bold"/>
                                             </attributes>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="padding">8</property>
-                                            <property name="position">0</property>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">0</property>
+                                            <property name="width">2</property>
                                           </packing>
                                         </child>
                                         <child>
@@ -1051,11 +1059,13 @@ Diogo JC Duarte
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <property name="label" translatable="yes">NaN</property>
+                                            <property name="angle">270</property>
+                                            <property name="yalign">0.039999999105930328</property>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">1</property>
+                                            <property name="left_attach">1</property>
+                                            <property name="top_attach">2</property>
+                                            <property name="height">2</property>
                                           </packing>
                                         </child>
                                         <child>
@@ -1297,41 +1307,50 @@ Diogo JC Duarte
                                             </child>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">2</property>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">2</property>
+                                            <property name="height">2</property>
+                                          </packing>
+                                        </child>
+                                        <child>
+                                          <object class="GtkSeparator">
+                                            <property name="visible">True</property>
+                                            <property name="can_focus">False</property>
+                                          </object>
+                                          <packing>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">1</property>
+                                            <property name="width">2</property>
                                           </packing>
                                         </child>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
                                         <property name="fill">True</property>
-                                        <property name="padding">3</property>
-                                        <property name="position">1</property>
+                                        <property name="position">5</property>
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkBox">
+                                      <object class="GtkGrid">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
-                                        <property name="orientation">vertical</property>
-                                        <property name="spacing">2</property>
+                                        <property name="column_homogeneous">True</property>
                                         <child>
                                           <object class="GtkLabel">
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
+                                            <property name="margin_top">10</property>
+                                            <property name="margin_bottom">8</property>
                                             <property name="label" translatable="yes">U-Tmr</property>
-                                            <property name="angle">270</property>
                                             <attributes>
                                               <attribute name="font-desc" value="Monospace 7"/>
                                               <attribute name="weight" value="bold"/>
                                             </attributes>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="padding">8</property>
-                                            <property name="position">0</property>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">0</property>
+                                            <property name="width">2</property>
                                           </packing>
                                         </child>
                                         <child>
@@ -1339,11 +1358,13 @@ Diogo JC Duarte
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <property name="label" translatable="yes">NaN</property>
+                                            <property name="angle">270</property>
+                                            <property name="yalign">0.039999999105930328</property>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">1</property>
+                                            <property name="left_attach">1</property>
+                                            <property name="top_attach">2</property>
+                                            <property name="height">2</property>
                                           </packing>
                                         </child>
                                         <child>
@@ -1585,41 +1606,50 @@ Diogo JC Duarte
                                             </child>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">2</property>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">2</property>
+                                            <property name="height">2</property>
+                                          </packing>
+                                        </child>
+                                        <child>
+                                          <object class="GtkSeparator">
+                                            <property name="visible">True</property>
+                                            <property name="can_focus">False</property>
+                                          </object>
+                                          <packing>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">1</property>
+                                            <property name="width">2</property>
                                           </packing>
                                         </child>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
                                         <property name="fill">True</property>
-                                        <property name="padding">3</property>
-                                        <property name="position">2</property>
+                                        <property name="position">6</property>
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkBox">
+                                      <object class="GtkGrid">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
-                                        <property name="orientation">vertical</property>
-                                        <property name="spacing">2</property>
+                                        <property name="column_homogeneous">True</property>
                                         <child>
                                           <object class="GtkLabel">
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
+                                            <property name="margin_top">10</property>
+                                            <property name="margin_bottom">8</property>
                                             <property name="label" translatable="yes">S-Tmr</property>
-                                            <property name="angle">270</property>
                                             <attributes>
                                               <attribute name="font-desc" value="Monospace 7"/>
                                               <attribute name="weight" value="bold"/>
                                             </attributes>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="padding">8</property>
-                                            <property name="position">0</property>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">0</property>
+                                            <property name="width">2</property>
                                           </packing>
                                         </child>
                                         <child>
@@ -1627,11 +1657,13 @@ Diogo JC Duarte
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <property name="label" translatable="yes">NaN</property>
+                                            <property name="angle">270</property>
+                                            <property name="yalign">0.039999999105930328</property>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">1</property>
+                                            <property name="left_attach">1</property>
+                                            <property name="top_attach">2</property>
+                                            <property name="height">2</property>
                                           </packing>
                                         </child>
                                         <child>
@@ -1873,17 +1905,27 @@ Diogo JC Duarte
                                             </child>
                                           </object>
                                           <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">2</property>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">2</property>
+                                            <property name="height">2</property>
+                                          </packing>
+                                        </child>
+                                        <child>
+                                          <object class="GtkSeparator">
+                                            <property name="visible">True</property>
+                                            <property name="can_focus">False</property>
+                                          </object>
+                                          <packing>
+                                            <property name="left_attach">0</property>
+                                            <property name="top_attach">1</property>
+                                            <property name="width">2</property>
                                           </packing>
                                         </child>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
                                         <property name="fill">True</property>
-                                        <property name="padding">3</property>
-                                        <property name="position">3</property>
+                                        <property name="position">7</property>
                                       </packing>
                                     </child>
                                   </object>
@@ -1916,15 +1958,14 @@ FLAGS</property>
                                       <packing>
                                         <property name="expand">False</property>
                                         <property name="fill">True</property>
-                                        <property name="padding">12</property>
+                                        <property name="padding">2</property>
                                         <property name="position">0</property>
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkLabel" id="stmr_num1">
+                                      <object class="GtkSeparator">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
-                                        <property name="label" translatable="yes">-</property>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
@@ -2156,7 +2197,6 @@ FLAGS</property>
                                   <packing>
                                     <property name="expand">False</property>
                                     <property name="fill">True</property>
-                                    <property name="padding">6</property>
                                     <property name="position">3</property>
                                   </packing>
                                 </child>
@@ -2193,6 +2233,7 @@ FLAGS</property>
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">True</property>
                                     <property name="always_show_image">True</property>
+                                    <signal name="clicked" handler="add_peripheral" swapped="no"/>
                                     <child>
                                       <object class="GtkBox">
                                         <property name="visible">True</property>
@@ -2234,6 +2275,7 @@ FLAGS</property>
                                 <child>
                                   <object class="GtkButton">
                                     <property name="visible">True</property>
+                                    <property name="sensitive">False</property>
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">True</property>
                                     <property name="always_show_image">True</property>
@@ -2276,7 +2318,7 @@ FLAGS</property>
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="GtkComboBoxText">
+                                  <object class="GtkComboBoxText" id="device_picker">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <property name="active">0</property>
@@ -2301,6 +2343,7 @@ FLAGS</property>
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">True</property>
                                     <property name="always_show_image">True</property>
+                                    <signal name="clicked" handler="add_comment" swapped="no"/>
                                     <child>
                                       <object class="GtkBox">
                                         <property name="visible">True</property>
@@ -3130,7 +3173,7 @@ Equality Test</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="tooltip_text" translatable="yes">The available ALU operations</property>
-                    <property name="label" translatable="yes">Arithm&amp;Logic</property>
+                    <property name="label" translatable="yes">Arithmetics&amp;Logic</property>
                   </object>
                   <packing>
                     <property name="position">1</property>
