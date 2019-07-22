@@ -10,12 +10,17 @@ from some_functions import *
 import some_functions as some  # So the namespace can be referred to by the ALU class.
 import configuration as sett
 	
+	
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk as g
+	
 ## Device primitives:
 
 class Flip_Flop:
-	def __init__(self, core):
+	def __init__(self, core, init=False):
 		self.c = core
-		self.value = False
+		self.value = init
 		
 	def get(self):
 		return self.value
@@ -35,8 +40,8 @@ class Flip_Flop:
 		pass
 		
 class Bus_Flip_Flop(Flip_Flop):
-	def __ini__(self, core, bit_of_interest=0):
-		Flip_Flop.__ini__(self, core)
+	def __ini__(self, core, init=False, bit_of_interest=0):
+		Flip_Flop.__init__(self, core, init)
 		self.boi=bit_of_interest
 		
 	def set(self, val=None):
@@ -47,9 +52,9 @@ class Bus_Flip_Flop(Flip_Flop):
 		Flip_Flop.set(self, val)
 		
 class Register:
-	def __init__(self, core):
+	def __init__(self, core, init=0):
 		self.c = core
-		self.value = 0
+		self.value = init
 		self.mirrors = list()
 	
 	def get(self):
@@ -71,9 +76,9 @@ class Register:
 
 
 class ALU:
-	def __init__(self, core, name="Bogus ALU module", logic="TO_ACCUM({0})##SETUP LOGIC="):
+	def __init__(self, core, note="Bogus ALU module", logic="TO_ACCUM({0})##SETUP LOGIC="):
 		self.c = core
-		self.name = name
+		self.note = note
 		
 		self.namespace = {"__builtins__":__builtins__}
 		for each in dir(self):
@@ -97,6 +102,15 @@ class ALU:
 				self.setup(ini)  # Get the initial mode
 			except:
 				print("ALU setup code or initial input is either invalid or empty.")
+		
+	def get_ui(self):
+		container = g.Box(0,0)
+		note_area = g.Label(self.note)
+		addr_area = g.Label("????")
+		container.pack_start(addr_area, 0, 1, 6)
+		container.pack_start(note_area, 1, 1, 6)
+		container.pack_end(g.Button.new_with_label("Delete"), 0, 1, 6)
+		return container
 		
 	def set(self, M=None, A=None):
 		if M is None:
@@ -133,11 +147,17 @@ class ALU:
 				getattr(flag[which], pick[mode])(bool(int(state,2)))
 
 class LED(Flip_Flop):
-	def __init__(self, core, ui_obj):
-		# This object takes a GTK_image
-		Flip_Flop.__init__(self, core)
+	def __init__(self, core, init=False, obj=None):
+		Flip_Flop.__init__(self, core, init)
 		self.pick = ("gtk-media-stop", "gtk-media-record")
-		self.do = ui_obj
+		
+		if obj is None:
+			self.do = g.Image.new_from_icon_name(self.pick[init], 4)
+		else:
+			self.do = obj
+
+	def get_ui(self):
+		return self.do
 
 	def set(self, val=True):
 		Flip_Flop.set(self, val)
@@ -147,11 +167,17 @@ class LED(Flip_Flop):
 		self.do.set_from_stock(self.pick[int(self.value)], 4)
 
 class Num_Disp(Register):
-	def __init__(self, core, label_obj):
-		# This object takes a GTK_labe
-		Register.__init__(self, core)
-		self.note = ""
-		self.disp = label_obj
+	def __init__(self, core, init=0, note="", obj=None):
+		Register.__init__(self, core, init)
+		self.note = note
+		
+		if obj is None:
+			self.disp = g.label(init)
+		else:
+			self.disp = obj
+	
+	def get_ui(self):
+		return self.disp()
 	
 	def set(self, inp=None):
 		Register.set(self,inp)
@@ -163,11 +189,41 @@ class Num_Disp(Register):
 
 
 class Bargraph(Register):
-	def __init__(self, core, lamp_objs):
-		# This object takes a list of GTK_image
-		Register.__init__(self, core)
+	def __init__(self, core, init=0, note="", obj=None):
+		Register.__init__(self, core, init)
 		self.pick = ("gtk-media-stop", "gtk-media-record")
-		self.bar = lamp_objs
+		self.note = note
+		
+		if obj is None:
+			self.bar = list()
+			b = bin(self.value)[2:].zfill(8)
+			for led in b:
+				self.bar.append( g.Image.new_from_icon_name(self.pick[int(led)], 4) )
+		else:
+			self.bar = obj
+
+	def get_ui(self, read, write):
+		container = g.Box(0,0)
+		note_area = g.Entry()
+		note_area.set_text(self.note)
+		read_area = g.Entry()
+		read_area.set_text(str(read))
+		read_area.set_max_length(6)
+		read_area.set_max_width_chars(6)
+		read_area.set_width_chars(6)
+		read_area.set_sensitive(False)
+		write_area = g.Entry()
+		write_area.set_text(str(write))
+		write_area.set_max_length(6)
+		write_area.set_max_width_chars(6)
+		write_area.set_width_chars(6)
+		container.pack_start(read_area, 0, 1, 6)
+		container.pack_start(write_area, 0, 1, 6)
+		for each in self.bar:
+			container.pack_start(each, 0, 1, 3)
+		container.pack_start(note_area, 1, 1, 6)
+		container.pack_end(g.Button.new_with_label("Delete"), 0, 1, 6)
+		return container
 
 	def set(self, inp=None):
 		Register.set(self,inp)
@@ -184,13 +240,21 @@ class Bargraph(Register):
 
 
 class DipSwitch(Register):
-	def __init__(self, core, entry_obj):
+	def __init__(self, core, init=0, note="", obj=None):
 		# This object takes a GTK_Entry
-		Register.__init__(self, core)
-		self.note = ""
-		self.entry = entry_obj
+		Register.__init__(self, core, init)
+		self.note = note
+		
+		if obj is None:
+			self.entry = g.Entry()
+			self.entry.set_text(init)
+		else:
+			self.entry = entry_obj
 		
 		entry_obj.connect("activate", self.intake)
+	
+	def get_ui(self):
+		return self.entry
 	
 	def set(self, inp=None):
 		Register.set(self,inp)
@@ -205,40 +269,77 @@ class DipSwitch(Register):
 		
 	
 class GPIO(Register):
-	def __init__(self, core, label_obj, mode_indicator):
-		# This object takes a GTK_entry
-		Register.__init__(self, core)
-		self.pick = ("gtk-fullscreen", "gtk-leave-fullscreen")
-		self.note = ""
+	def __init__(self, core, init=0, note="", obj=None):
+		# obj = g.Entry, g.Image
+		Register.__init__(self, core, init)
+		self.pick = (("gtk-fullscreen", "gtk-leave-fullscreen"), ("This is a Written-to device", "This is a Readable device"))
+		self.note = note
 		self.mode = False  # False = Readable device; True = Written-to device
-		self.disp = label_obj
-		self.LED = mode_indicator
 		
-		disp.connect("activate", self.intake)
+		if obj is None:
+			self.disp, self.LED = g.Entry(), g.Image.new_from_icon_name(self.pick[0][init], 5)
+			self.disp.set_text(str(init))
+			self.LED.set_tooltip_text(self.pick[1][int(self.mode)])
+		else:
+			self.disp, self.LED = obj
+		
+		self.disp.connect("activate", self.intake)
+	
+	def get_ui(self, read, write):
+		container = g.Box(0,0)
+		note_area = g.Entry()
+		note_area.set_text(self.note)
+		read_area = g.Entry()
+		read_area.set_text(str(read))
+		read_area.set_max_length(6)
+		read_area.set_max_width_chars(6)
+		read_area.set_width_chars(6)
+		write_area = g.Entry()
+		write_area.set_text(str(write))
+		write_area.set_max_length(6)
+		write_area.set_max_width_chars(6)
+		write_area.set_width_chars(6)
+		self.disp.set_max_length(6)
+		self.disp.set_max_width_chars(6)
+		self.disp.set_width_chars(6)
+		container.pack_start(read_area, 0, 1, 6)
+		container.pack_start(write_area, 0, 1, 6)
+		container.pack_start(self.disp, 0, 1, 6)
+		container.pack_start(self.LED, 0, 1, 6)
+		container.pack_start(note_area, 1, 1, 6)
+		container.pack_end(g.Button.new_with_label("Delete"), 0, 1, 6)
+		return container
+		
 	
 	def set(self, inp=None):
-		Register.set(self,inp)
+		if inp is None or self.mode:
+			# When "None", some non-user system is forcing the value.
+			Register.set(self,inp)
 		self.update()
 	
 	def setup(self):
-		pattern = bin(self.c.A_BUS.get())[-2:]
+		pattern = bin(self.c.A_BUS.get())[2:].zfill(8)[-2:]
 		pick = {"00":self.mode, "01":not self.mode, "10":False, "11": True}
 		self.mode = pick[pattern]
+		self.update()
 	
 	def update(self):
 		self.disp.set_text(str(self.value))
-		self.LED.set_from_stock(self.pick[int(self.value)], 4)
+		self.LED.set_from_stock(self.pick[0][int(self.mode)], 5)
+		self.LED.set_tooltip_text(self.pick[1][int(self.mode)])
 
-	def intake(self, widget, signal):
-		if not mode:
-			inp = int(widget.get_text())
+	def intake(self, widget):
+		if not self.mode:
+			inp = int(widget.get_text(), 0)
 			self.set(inp)
+		else:
+			widget.set_text(self.get())
 
-class Piano(GPIO):
-	def __init__(self, core, button_objs):
+class Keyboard(GPIO):
+	def __init__(self, core, init=0, obj=None):
 		# This object takes a list of GTK_Buttons
-		GPIO.__init__(self, core)
-		self.timbre = "Piano"
+		GPIO.__init__(self, core, 0)
+		self.timbre = ("Piano", "Drum", "High_Hat")
 	
 	def set(self, inp=None):
 		GPIO.set(self,inp)

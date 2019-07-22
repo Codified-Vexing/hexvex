@@ -47,6 +47,8 @@ oper = {
 		"hexfet":(0x13, "hexfet"),
 		"utfet":(0x14, "utfet"),
 		"xfeed":(0x15, "xfeed"),
+		"fedfet":(0x16, "fedfet"), # Experimental opcode: swaps 16bit values between ALU and Cache
+		"whole":(0x17, "whole"), # Experimental opcode: sets all registers to the argument's value
 		"!t":(0x24, "toggle"),
 		"t>n":(0x25, "nstart"),
 		"t>r":(0x26, "rstart"),
@@ -113,15 +115,9 @@ class Core:
 					self.I.A_BUS.set(0)
 					self.I.JMP.reset()
 				elif self.I.PNTR() % 8 == 2:
-					try:
-						getattr(self.decoder[0], line["opcode"])(line["arg"])
-					except:
-						print("Failed to process at Stage 1:", line)
+					getattr(self.decoder[0], line["opcode"])(line["arg"])
 				elif self.I.PNTR() % 8 == 4:
-					try:
-						getattr(self.decoder[1], line["opcode"])(line["arg"])
-					except:
-						print("Failed to process at Stage 2:", line)
+					getattr(self.decoder[1], line["opcode"])(line["arg"])
 				elif self.I.PNTR() % 8 == 6:
 					pass	
 
@@ -271,7 +267,7 @@ class Decoder:
 		self.c = core
 		
 	def __getattr__(self, attr):
-		print("OPCODE ILLEGAL")
+		print("OPCODE ILLEGAL:", attr)
 
 class Stage1(Decoder):
 	##The operations:
@@ -369,7 +365,7 @@ class Stage2(Decoder):
 		self.c.I.WAIT.set()
 	def poke(self, addr):
 		regs = set(self.c.read.get(addr, list()))
-		regs ^= set(self.c.write.get(addr, list()))
+		regs |= set(self.c.write.get(addr, list()))
 		regs = list(regs)
 
 		for each in regs:
