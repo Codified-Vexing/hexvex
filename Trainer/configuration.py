@@ -19,11 +19,11 @@ pane_handle_position = 300
 
 default_peripherals = (
 	# read address, write address, device kind, initial value, args
-	(None, 0x01, "Bargraph", 0b01010101, ("A Binary Display", )),
-	(0xaa, 0xaa, "GPIO", 0, ("io_a",)),
-	(0xbb, 0xbb, "GPIO", 0, ("io_b",)),
-	(0xcc, 0xcc, "GPIO", 0, ("io_c",)),
-	(0xdd, 0xdd, "GPIO", 0, ("io_d",)),
+	(None, 0x01, "Bargraph", {"init":0b01010101, "note":"A Binary Display",}),
+	(0xaa, 0xaa, "GPIO", {"note":"io_a",}),
+	(0xbb, 0xbb, "GPIO", {"note":"io_c",}),
+	(0xcc, 0xcc, "GPIO", {"note":"io_b",}),
+	(0xdd, 0xdd, "GPIO", {"note":"io_d",}),
 					)
 default_alu = {
 	# write address: (comment, logic code)

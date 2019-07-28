@@ -212,14 +212,12 @@ Diogo JC Duarte
             <property name="tearoff_title" translatable="yes">Thing</property>
             <property name="has_entry">True</property>
             <property name="active_id">new_one</property>
-            <items>
-              <item id="new_one" translatable="yes">New Program</item>
-            </items>
             <signal name="changed" handler="load_file" swapped="no"/>
             <child internal-child="entry">
               <object class="GtkEntry">
                 <property name="can_focus">True</property>
                 <property name="caps_lock_warning">False</property>
+                <property name="placeholder_text" translatable="yes">Program Title</property>
                 <property name="input_hints">GTK_INPUT_HINT_WORD_COMPLETION | GTK_INPUT_HINT_NONE</property>
                 <signal name="activate" handler="smart_load" swapped="no"/>
               </object>
@@ -581,56 +579,6 @@ Diogo JC Duarte
                                         <property name="expand">True</property>
                                         <property name="fill">True</property>
                                         <property name="position">1</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkStack" id="spec_devices">
-                                        <property name="visible">True</property>
-                                        <property name="can_focus">False</property>
-                                        <property name="transition_duration">1000</property>
-                                        <property name="transition_type">slide-right</property>
-                                        <property name="interpolate_size">True</property>
-                                        <child>
-                                          <object class="GtkLabel">
-                                            <property name="visible">True</property>
-                                            <property name="can_focus">False</property>
-                                            <property name="label" translatable="yes">A waveform plot. Soon(TM)</property>
-                                          </object>
-                                          <packing>
-                                            <property name="name">analogue</property>
-                                            <property name="title" translatable="yes">Analogue</property>
-                                          </packing>
-                                        </child>
-                                        <child>
-                                          <object class="GtkLabel">
-                                            <property name="visible">True</property>
-                                            <property name="can_focus">False</property>
-                                            <property name="label" translatable="yes"> Soon(TM)</property>
-                                          </object>
-                                          <packing>
-                                            <property name="name">the_matrix</property>
-                                            <property name="title" translatable="yes">The Matrix</property>
-                                            <property name="position">1</property>
-                                          </packing>
-                                        </child>
-                                        <child>
-                                          <object class="GtkLabel">
-                                            <property name="visible">True</property>
-                                            <property name="can_focus">False</property>
-                                            <property name="label" translatable="yes"> Soon(TM)</property>
-                                          </object>
-                                          <packing>
-                                            <property name="name">vector_screen</property>
-                                            <property name="title" translatable="yes">Vectronix</property>
-                                            <property name="position">2</property>
-                                          </packing>
-                                        </child>
-                                      </object>
-                                      <packing>
-                                        <property name="expand">False</property>
-                                        <property name="fill">True</property>
-                                        <property name="pack_type">end</property>
-                                        <property name="position">4</property>
                                       </packing>
                                     </child>
                                   </object>
@@ -2256,6 +2204,7 @@ FLAGS</property>
                                       <item translatable="yes">RAM</item>
                                       <item translatable="yes">ROM</item>
                                       <item translatable="yes">7-Segment Display</item>
+                                      <item translatable="yes">Timepiece</item>
                                     </items>
                                   </object>
                                   <packing>
@@ -2661,7 +2610,6 @@ Hex Notation:</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="orientation">vertical</property>
-                                <property name="stack">spec_devices</property>
                               </object>
                               <packing>
                                 <property name="expand">False</property>

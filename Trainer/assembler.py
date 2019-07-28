@@ -91,13 +91,13 @@ class Core:
 		
 	def __next__(self):
 		# Compute an instruction
-		DIGITAL_HIGH = self.I.PNTR() % 2 == 0
-		if self.I.UTMR.get() and DIGITAL_HIGH:
+		count = self.I.PNTR() % 8 == 0
+		if self.I.UTMR.get() and count:
 			self.I.STEP_UTMR()
 			
 		if self.I.WAIT.get():
 			#print("HexVex is halted...")
-			if DIGITAL_HIGH:
+			if count:
 				self.I.STEP_STMR()
 		elif instr(self.I.PNTR()) >= len(self.PROG):
 			print("The program is empty!")
@@ -109,7 +109,7 @@ class Core:
 				if self.I.PNTR() % 8 == 0:
 					# Cleaning up...
 					if self.I.I_FLAG.get():
-						self.I.ACC_set(self.I.I_BUS.get())
+						self.I.ACC_set(self.I.I_BUS())
 						self.I.I_FLAG.reset()
 					self.I.M_BUS.set(0)
 					self.I.A_BUS.set(0)
@@ -120,7 +120,7 @@ class Core:
 					getattr(self.decoder[1], line["opcode"])(line["arg"])
 				elif self.I.PNTR() % 8 == 6:
 					pass	
-
+					
 		if not self.I.JMP.get():
 			self.I.PNTR_add(1)
 		self.I.BLINKER.toggle()
@@ -273,7 +273,7 @@ class Stage1(Decoder):
 	##The operations:
 	#SYS
 	def nhalt(self, inp):
-		pass
+		self.c.I.SLEEP_START = self.c.I.PNTR()+8
 	def rhalt(self, inp):
 		pass
 	def chalt(self, inp):
@@ -328,7 +328,7 @@ class Stage1(Decoder):
 		self.c.I.M_BUS.set(self.c.I.utmr_lsb.get())
 		self.c.I.A_BUS.set(self.c.I.utmr_msb.get())
 	def xfeed(self, inp):
-		pass
+		self.rmove(join_byte(inp, 0))		
 	#TIMER
 	def toggle(self, inp): pass
 	def nstart(self, inp):
@@ -336,7 +336,7 @@ class Stage1(Decoder):
 		self.c.I.M_BUS.set(lsb)
 		self.c.I.A_BUS.set(msb)
 	def rstart(self, inp):
-		bogus, src_addr = split_hex(inp)
+		src_addr = trunc(inp, 8)
 		tgts = self.c.read.get(src_addr, list())
 		if len(tgts) >= 2:
 			print("Short circuit between Peripherals detected!")
@@ -384,7 +384,7 @@ class Stage2(Decoder):
 		self.c.I.PNTR_set(where)
 	#MOVE
 	def nmove(self, inp):
-		n, addr = split_hex(inp)
+		addr = trunc(inp, 8)
 		tgts = self.c.write.get(addr, list())
 		for each in tgts:
 			each.set()
@@ -397,6 +397,16 @@ class Stage2(Decoder):
 		self.accfet(inp)
 	def utfet(self, inp):
 		self.accfet(inp)
+	def xfeed(self, inp):
+		# This isn't the best emulation, but it might just about work well enough
+		tgt_addr = trunc(inp, 8)
+		feed1 = self.c.I.M_BUS.get()
+		feed2 = self.c.I.A_BUS.get()
+		tgts = self.c.write.get(tgt_addr, list())
+		for each in tgts:
+			each.set(feed2)
+		self.c.I.acc_lsb.set(feed1)
+		self.c.I.acc_msb.set(0)
 	#TIMER
 	def toggle(self, inp):
 		self.c.I.UTMR.toggle()

@@ -73,8 +73,8 @@ class Environ:
 		#Instantiate and setup peripherals		
 		# read address, write address, device kind, initial value, comment
 		for each in sett.default_peripherals:
-			read, write, kind, init, args = each			
-			self.new_device(kind, read, write, init, args)
+			read, write, kind, args = each			
+			self.new_device(kind, read, write, args)
 		
 		# Instantiate and Setup the ALU modules
 		for addr, each in sett.default_alu.items():
@@ -84,8 +84,8 @@ class Environ:
 			self.aluLt.add(inst.get_ui())
 
 
-	def new_device(self, kind, read, write, init, args):
-		funk = getattr(H, kind)(self.cpu.I, init, *args)
+	def new_device(self, kind, read, write, args):
+		funk = getattr(H, kind)(self.cpu.I, **args)
 		form = funk.get_ui(read, write)
 		if read:
 			self.cpu.add(funk, read_addr=read)
@@ -163,9 +163,10 @@ class Environ:
 				"Number Display": "Num_Disp",
 				"Binary Display": "Bargraph",
 				"Generic Input": "DipSwitch",
+				"Timepiece": "RTC",
 				}
 		kind = aliases.get(self.devc_kind.get_active_text(),"GPIO")
-		self.new_device(kind, None, None, 0, tuple())
+		self.new_device(kind, None, None, tuple())
 	
 	def add_comment(self, widget):
 		comment = g.TextView()

@@ -25,7 +25,9 @@ class Wares:
 
 		self.M_BUS = Register(self)  # Main Bus
 		self.A_BUS = Register(self)  # Auxiliary Bus
-		self.I_BUS = Register(self)  # ALU BUS ("I" for "Integration")
+		self.I_BUS_lsb = Register(self)  # ALU BUS ("I" for "Integration")
+		self.I_BUS_msb = Register(self)  # ALU BUS ("I" for "Integration")
+		
 		self.I_FLAG = Flip_Flop(self)  # Accumulator trigger flag
 
 		# State Registers
@@ -41,6 +43,7 @@ class Wares:
 		self.UTMR = Flip_Flop(self)
 		# weird ones
 		self.JMP = Flip_Flop(self)
+		self.SLEEP_START = 0
 		#---
 
 		self.cach_lsb = Register(self)
@@ -58,6 +61,16 @@ class Wares:
 	## Signalling functions to internal registers:
 	# They are here rather than hxv wiring because quirks in Python would let them 
 	# be aware if the Register objects changed to other kind of register.
+	
+	def I_BUS(self):
+		return join_byte(self.I_BUS_msb.get(), self.I_BUS_lsb.get())
+	def I_BUS_set(self, inp):
+		msb, lsb = split_hex(inp)
+		self.I_BUS_lsb.set(lsb)
+		self.I_BUS_msb.set(msb)
+	
+	def PNTR(self):
+		return join_byte(self.pntr_msb.get(), self.pntr_lsb.get())
 	def PNTR_add(self, inp):
 		n = join_byte(self.pntr_msb.get(), self.pntr_lsb.get())
 		n += inp
@@ -68,8 +81,6 @@ class Wares:
 		msb, lsb = split_hex(inp)
 		self.pntr_lsb.set(lsb)
 		self.pntr_msb.set(msb)
-	def PNTR(self):
-		return join_byte(self.pntr_msb.get(), self.pntr_lsb.get())
 	def GOBAK_set(self, inp):
 		msb, lsb = split_hex(inp)
 		self.gobak_lsb.set(lsb)
@@ -101,9 +112,10 @@ class Wares:
 		self.utmr_msb.set(msb)
 	def STEP_STMR(self):
 		n = join_byte(self.stmr_msb.get(), self.stmr_lsb.get())
-		if n == 0:
+		if n <= 0:
 			pass
 		elif n == 1:
+			self.PNTR_set(self.SLEEP_START)
 			self.WAIT.reset()
 		else:
 			n -= 1

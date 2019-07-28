@@ -6,10 +6,11 @@ __author__ = "Diogo JC Duarte"
 __version__ = "0.1.0"
 __license__ = "GNU GPL-3.0"
 
+import datetime
+
 from some_functions import *
 import some_functions as some  # So the namespace can be referred to by the ALU class.
 import configuration as sett
-	
 	
 import gi
 gi.require_version("Gtk", "3.0")
@@ -136,7 +137,7 @@ class ALU:
 		self.mode = inp
 		
 	def TO_ACCUM(self, inp):
-		self.c.I_BUS.set(wrap(inp, 0x10000))
+		self.c.I_BUS_set(wrap(inp, 0x10000))
 
 	def TO_FLAGS(self, pattern, mode):
 		pick = ("set", "toggle")
@@ -312,7 +313,7 @@ class GPIO(Register):
 		
 	
 	def set(self, inp=None):
-		if inp is None or self.mode:
+		if not self.mode:
 			# When "None", some non-user system is forcing the value.
 			Register.set(self,inp)
 		self.update()
@@ -336,15 +337,98 @@ class GPIO(Register):
 			widget.set_text(self.get())
 
 class Keyboard(GPIO):
+	"""
+	A musical sequencing device.
+	The user can press keys to play sound and input a number or have the 
+	program send the same number to make it play automatically.
+	That number is associated with a note/frequency. The mode can be set to
+	pick the musical instrument, or voice.
+	On the user interface, the device can be muted.
+	"""
 	def __init__(self, core, init=0, obj=None):
 		# This object takes a list of GTK_Buttons
 		GPIO.__init__(self, core, 0)
-		self.timbre = ("Piano", "Drum", "High_Hat")
+		self.timbre = ("Piano", "Guitar", "Harmonica", "Drum", "High_Hat")
 	
 	def set(self, inp=None):
 		GPIO.set(self,inp)
 		# Play note
 
+
+class RTC(Register):
+	"""
+	This is a real-time clock. It can only be read and will tell the current
+	time by supplying the number of the hour, minute, second, or combination, 
+	depending on the mode.
+	The year is in the last 2 digits format.
+	And offset and hour format can be adjusted through UI. Default is 24Hr UTC
+	"""
+	def __init__(self, core, init=0, note=""):
+		Register.__init__(self, core, datetime.datetime.utcnow().year)
+		self.note = note
+		self.mode = 1  # millenium, year, month, week, day, hour, minute, second
+		self.offset = 0
+
+	def get_ui(self, read, write):
+		container = g.Box(0,0)
+		note_area = g.Entry()
+		note_area.set_text(self.note)
+		read_area = g.Entry()
+		read_area.set_text(str(read))
+		read_area.set_max_length(6)
+		read_area.set_max_width_chars(6)
+		read_area.set_width_chars(6)
+		read_area.set_sensitive(False)
+		write_area = g.Entry()
+		write_area.set_text(str(write))
+		write_area.set_max_length(6)
+		write_area.set_max_width_chars(6)
+		write_area.set_width_chars(6)
+		year=g.SpinButton.new(g.Adjustment(0, -100, 101, 1, 1, 1), 1.5, 0)
+		month=g.SpinButton.new(g.Adjustment(0, -12, 13, 1, 3, 1), 1.5, 0)
+		day=g.SpinButton.new(g.Adjustment(0, -31, 32, 1, 7, 1), 1.5, 0)
+		hour=g.SpinButton.new(g.Adjustment(0, -24, 25, 1, 6, 1), 1.5, 0)
+		minute=g.SpinButton.new(g.Adjustment(0, -60, 61, 1, 15, 1), 1.5, 0)
+		second=g.SpinButton.new(g.Adjustment(0, -60, 61, 1, 15, 1), 1.5, 0)
+		row1 = g.Box(0,0)
+		row1.pack_start(year, 0, 1, 0)
+		row1.pack_start(month, 0, 1, 0)
+		row1.pack_start(day, 0, 1, 0)
+		row2 = g.Box(0,0)
+		row2.pack_start(hour, 0, 1, 0)
+		row2.pack_start(minute, 0, 1, 0)
+		row2.pack_start(second, 0, 1, 0)
+		ctrl = g.Box(1,0)
+		ctrl.pack_start(row1, 0, 1, 0)
+		ctrl.pack_start(row2, 0, 1, 0)
+		container.pack_start(read_area, 0, 1, 6)
+		container.pack_start(write_area, 0, 1, 6)
+		container.pack_start(g.Label("+OFFSET:"), 0, 1, 6)
+		container.pack_start(ctrl, 0, 1, 0)
+		container.pack_start(note_area, 1, 1, 0)
+		container.pack_end(g.Button.new_with_label("Delete"), 0, 1, 6)
+		return container
+
+	def set(self,inp=None):
+		pass
+	def get(self):
+		now = datetime.datetime.utcnow()
+		pick = [
+				now.second,
+				now.minute,
+				now.hour,
+				now.day,
+				now.month,
+				now.year[-2:],
+				now.year[1],
+				]
+		self.value = pick[self.mode]
+		for k, each in enumerate(self.value):
+			self.value[k] += self.offset[k]
+		return getattr(now, self.value)
+	def setup(self):
+		num = bin(self.c.A_BUS.get())
+		self.mode = wrap(num, 8)
 
 ## Weird ones:
 class TackOnSTT:
