@@ -9,26 +9,32 @@
 *dividend = 49
 *divisor = 4
 
+_nmove 0 io_a
+_nmove 0 io_b
+_nmove 0 io_c
+_nmove 0 io_d
+
 # Calculate quotient
 [start]
-_nmove divisor adder
-_nmove dividend tequal
->rmove acc1 ca2
->xfeed ca1
+_nmove dividend teql
+>nmove divisor adder
+>xfeed io_a
+>xfeed io_b
 >nmove 1 adder
->xfeed ca1
+>xfeed io_b
+>xfeed io_a
 >ngoto start
 
-# The quotient has been found, thus we output it to a display.
-_rmove ca1 io_a
-
-# Clean up
-_nmove 0 multp
-_xfeed ca2
+#_nmove dividend teql
+#>nmove divisor adder
+#>xfeed ca1
+#>nmove 1 adder
+#>xfeed ca1
+#>ngoto start
 
 # Calculate modulus and output
-_nmove 0 nega
-_nmove dividend adder
-_rmove acc1 io_b
+#_nmove dividend nega
+#_rmove ca2 adder
+#_rmove acc1 io_b
 
 _nhalt
